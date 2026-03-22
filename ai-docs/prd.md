@@ -1,8 +1,14 @@
-# KYC Document Processing — Agentic Application Requirements (v4)
+# KYC Document Processing — Agentic Application Requirements (v5)
 
 ## 1. Business Context
 
 This application is for a **KYC (Know Your Customer)** operations team. **KYC Ops users** currently handle large volumes of documents manually. The goal is to automate and orchestrate the end-to-end KYC document processing workflow using an agentic AI system built in Python.
+
+### Multi-Language Support
+
+Documents are **multi-language**, primarily in **English and German**. The system must correctly extract and process information regardless of the document language.
+
+**MVP Focus**: German business registry documents from **HandelsRegister** (Handelsregister — the German Commercial Register) will be the primary test documents for MVP validation.
 
 ---
 
@@ -61,7 +67,15 @@ Classify each individual as **CSM (Client Senior Manager)** or **Non-CSM** based
 
 ### Step 4 — Final Output
 
-Two structured lists: **CSM** and **Non-CSM**. Each entry includes the **complete extracted record**:
+The final output includes:
+
+1. **Document Manifest** — A complete list of all original documents received by the extractor, including:
+   - Filename
+   - File type (PDF, TXT, etc.)
+   - Page count
+   - Processing status (successfully processed / failed / partially processed)
+
+2. **Two structured person lists: CSM and Non-CSM**. Each entry includes the **complete extracted record**:
 
 | Field | Notes |
 |---|---|
@@ -95,12 +109,19 @@ A **Critic Agent** reviews the output at every step. The Critic has exactly **th
 
 ---
 
-## 4. Supported File Types
+## 4. Supported File Types & Languages
 
 | Phase | Supported Formats |
 |---|---|
 | **MVP** | PDF (.pdf), Plain text (.txt) |
 | **Post-MVP** | Excel (.xlsx), Word (.docx) |
+
+| Phase | Supported Languages |
+|---|---|
+| **MVP** | German, English |
+| **Post-MVP** | Additional European languages as needed |
+
+**MVP Document Source**: German HandelsRegister (Commercial Register) documents — official business registry extracts containing company officers, directors, and authorized representatives.
 
 ---
 
