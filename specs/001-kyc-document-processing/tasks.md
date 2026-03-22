@@ -17,13 +17,13 @@
 
 Foundation tasks that must complete before any feature work.
 
-- [ ] T001 [S] Initialize Python 3.11+ project with pyproject.toml in `./`
-- [ ] T002 [S] Create virtual environment and configure .gitignore in `./`
-- [ ] T003 [S] Set up project directory structure per plan.md in `src/`, `tests/`
-- [ ] T004 [P] Create requirements.txt with core dependencies (langgraph, fastapi, pdfplumber, rapidfuzz, sqlalchemy) in `./requirements.txt`
-- [ ] T005 [P] Create .env.example with LLM_PROVIDER, OPENAI_API_KEY, GOOGLE_API_KEY, DATABASE_URL in `./.env.example`
-- [ ] T006 [P] Configure pytest with pytest-asyncio in `./pyproject.toml`
-- [ ] T007 [S] Create empty __init__.py files for all packages in `src/`
+- [x] T001 [S] Initialize Python 3.11+ project with pyproject.toml in `./`
+- [x] T002 [S] Create virtual environment and configure .gitignore in `./`
+- [x] T003 [S] Set up project directory structure per plan.md in `src/`, `tests/`
+- [x] T004 [P] Create requirements.txt with core dependencies (langgraph, fastapi, pdfplumber, rapidfuzz, sqlalchemy) in `./requirements.txt`
+- [x] T005 [P] Create .env.example with LLM_PROVIDER, OPENAI_API_KEY, GOOGLE_API_KEY, DATABASE_URL in `./.env.example`
+- [x] T006 [P] Configure pytest with pytest-asyncio in `./pyproject.toml`
+- [x] T007 [S] Create empty __init__.py files for all packages in `src/`
 
 ---
 
