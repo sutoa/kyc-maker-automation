@@ -128,6 +128,7 @@ KYC Ops users can view a list of all past workflow runs showing status (complete
 - What happens when mandatory fields cannot be extracted for any person? The extraction fails quality review and retries; after 4 failures, the workflow enters Failed state with detailed logging.
 - What happens when all extracted persons have conflicting information? All conflicts are flagged; the workflow continues but the output clearly indicates unresolved conflicts requiring human review.
 - What happens when a person cannot be classified due to insufficient information? The classifier makes a best-effort decision with explicit reasoning about the limitations, or flags for human review if no reasonable determination is possible.
+- What happens when the LLM service (OpenAI/Gemini) is unavailable? The system retries with exponential backoff (up to 3 attempts), then fails the workflow with a clear error message indicating service unavailability.
 
 ## Requirements *(mandatory)*
 
@@ -158,6 +159,7 @@ KYC Ops users can view a list of all past workflow runs showing status (complete
 **Data Reconciliation**
 
 - **FR-012**: System MUST identify and merge duplicate person records while preserving all source references
+- **FR-012a**: System MUST use fuzzy name matching to identify duplicate persons (e.g., "Hans Müller" and "Hans Mueller" are treated as potential duplicates)
 - **FR-013**: System MUST detect and flag conflicting information for the same person with source details for each value
 
 **Classification**
@@ -172,6 +174,7 @@ KYC Ops users can view a list of all past workflow runs showing status (complete
 - **FR-018**: Each output record MUST include all extracted fields, all source references, classification outcome, and reasoning
 - **FR-018a**: System MUST include a Document Manifest in the final output listing all original documents received by the extractor
 - **FR-018b**: Document Manifest MUST include for each document: filename, file type, page count, and processing status (successfully processed / failed / partially processed)
+- **FR-018c**: System MUST provide the final output as a downloadable JSON file
 
 **Agent Configuration**
 
@@ -191,6 +194,7 @@ KYC Ops users can view a list of all past workflow runs showing status (complete
 - **FR-026**: System MUST generate a complete audit log for every workflow run
 - **FR-027**: Audit logs MUST include timestamps, agent actions, inputs/outputs, decisions, and reasoning
 - **FR-028**: Source document and page number provenance MUST be preserved throughout the entire workflow
+- **FR-029**: System MUST retain all workflow results, audit logs, and source documents for 7 years from workflow completion (KYC compliance requirement)
 
 ### Key Entities
 
@@ -208,8 +212,19 @@ KYC Ops users can view a list of all past workflow runs showing status (complete
 
 - **Document Manifest**: A summary of all documents received for processing. Attributes: Filename, File type (PDF/TXT), Page count, Processing status (successfully processed/failed/partially processed). Included in final output.
 
+## Clarifications
+
+### Session 2025-03-22
+
+- Q: How should the system determine if two extracted records refer to the same person? → A: Fuzzy match on name only
+- Q: How should users authenticate and what access control is needed? → A: No authentication for MVP (single user, network-restricted)
+- Q: How should the workflow behave when the LLM service is unavailable? → A: Retry with exponential backoff (3 attempts), then fail with clear error
+- Q: How long should workflow results and audit logs be retained? → A: 7 years from workflow completion (KYC compliance standard)
+- Q: In what format should the final output be delivered to users? → A: JSON file download
+
 ## Assumptions
 
+- MVP assumes single user, no authentication required (network-restricted internal tool); multi-user auth deferred to post-MVP
 - The official KYC/CSM definition document exists and will be provided as reference material for the classification agent's prompts
 - Documents are in German or English; MVP focuses on German HandelsRegister documents
 - The LLM used supports German and English language processing
