@@ -33,55 +33,55 @@ Foundational services and models required by all user stories.
 
 ### 1.1 Data Models (Pydantic)
 
-- [ ] T010 [S] [US1-6] Define WorkflowStatus, FileType, CriticDecision enums in `src/models/enums.py`
-- [ ] T011 [P] [US1] Define Person and ExtractedPerson models with mandatory/optional fields in `src/models/person.py`
-- [ ] T012 [P] [US1] Define SourceReference model with document_id, page_number, confidence in `src/models/person.py`
-- [ ] T013 [P] [US2] Define ReconciledPerson model with conflicts and normalized names in `src/models/person.py`
-- [ ] T014 [P] [US3] Define ClassifiedPerson model with classification, reasoning, evidence in `src/models/person.py`
-- [ ] T015 [P] [US1-6] Define WorkflowRun model with status, timestamps, failure_reason in `src/models/workflow.py`
-- [ ] T016 [P] [US1-6] Define AgentExecution model with agent_name, payloads, retry_count in `src/models/workflow.py`
-- [ ] T017 [P] [US1-6] Define CriticFeedback model with decision, issues, suggested_corrections in `src/models/workflow.py`
-- [ ] T018 [P] [US4] Define DocumentManifestEntry model with filename, file_type, page_count, status in `src/models/output.py`
-- [ ] T019 [P] [US4] Define WorkflowOutput model combining manifest and person lists in `src/models/output.py`
+- [X] T010 [S] [US1-6] Define WorkflowStatus, FileType, CriticDecision enums in `src/models/enums.py`
+- [X] T011 [P] [US1] Define Person and ExtractedPerson models with mandatory/optional fields in `src/models/person.py`
+- [X] T012 [P] [US1] Define SourceReference model with document_id, page_number, confidence in `src/models/person.py`
+- [X] T013 [P] [US2] Define ReconciledPerson model with conflicts and normalized names in `src/models/person.py`
+- [X] T014 [P] [US3] Define ClassifiedPerson model with classification, reasoning, evidence in `src/models/person.py`
+- [X] T015 [P] [US1-6] Define WorkflowRun model with status, timestamps, failure_reason in `src/models/workflow.py`
+- [X] T016 [P] [US1-6] Define AgentExecution model with agent_name, payloads, retry_count in `src/models/workflow.py`
+- [X] T017 [P] [US1-6] Define CriticFeedback model with decision, issues, suggested_corrections in `src/models/workflow.py`
+- [X] T018 [P] [US4] Define DocumentManifestEntry model with filename, file_type, page_count, status in `src/models/output.py`
+- [X] T019 [P] [US4] Define WorkflowOutput model combining manifest and person lists in `src/models/output.py`
 
 ### 1.2 Database Layer (SQLAlchemy + SQLite)
 
-- [ ] T020 [S] [US1-6] Create SQLAlchemy database connection and session management in `src/services/database.py`
-- [ ] T021 [S] [US1-6] Define WorkflowRun SQLAlchemy table schema in `src/services/storage.py`
-- [ ] T022 [P] [US1-6] Define UploadedDocument SQLAlchemy table schema in `src/services/storage.py`
-- [ ] T023 [P] [US1-6] Define AgentExecution SQLAlchemy table schema in `src/services/storage.py`
-- [ ] T024 [P] [US1-6] Define CriticFeedback SQLAlchemy table schema in `src/services/storage.py`
-- [ ] T025 [P] [US1-6] Define Person SQLAlchemy table schema in `src/services/storage.py`
-- [ ] T026 [P] [US1-6] Define SourceReference SQLAlchemy table schema in `src/services/storage.py`
-- [ ] T027 [P] [US1-6] Define ClassificationResult SQLAlchemy table schema in `src/services/storage.py`
-- [ ] T028 [P] [US1-6] Define AuditLog SQLAlchemy table schema (immutable) in `src/services/storage.py`
-- [ ] T029 [S] [US1-6] Create database migration/initialization script in `src/services/database.py`
-- [ ] T030 [S] [US1-6] Write unit tests for storage CRUD operations in `tests/unit/test_storage.py`
+- [X] T020 [S] [US1-6] Create SQLAlchemy database connection and session management in `src/services/database.py`
+- [X] T021 [S] [US1-6] Define WorkflowRun SQLAlchemy table schema in `src/services/storage.py`
+- [X] T022 [P] [US1-6] Define UploadedDocument SQLAlchemy table schema in `src/services/storage.py`
+- [X] T023 [P] [US1-6] Define AgentExecution SQLAlchemy table schema in `src/services/storage.py`
+- [X] T024 [P] [US1-6] Define CriticFeedback SQLAlchemy table schema in `src/services/storage.py`
+- [X] T025 [P] [US1-6] Define Person SQLAlchemy table schema in `src/services/storage.py`
+- [X] T026 [P] [US1-6] Define SourceReference SQLAlchemy table schema in `src/services/storage.py`
+- [X] T027 [P] [US1-6] Define ClassificationResult SQLAlchemy table schema in `src/services/storage.py`
+- [X] T028 [P] [US1-6] Define AuditLog SQLAlchemy table schema (immutable) in `src/services/storage.py`
+- [X] T029 [S] [US1-6] Create database migration/initialization script in `src/services/database.py`
+- [X] T030 [S] [US1-6] Write unit tests for storage CRUD operations in `tests/unit/test_storage.py`
 
 ### 1.3 LLM Abstraction Layer (Constitution Principle IX)
 
-- [ ] T040 [S] [US1-6] Define LLMProvider Protocol (abstract interface) with complete() method in `src/core/llm/base.py`
-- [ ] T041 [S] [US1-6] Define Message and Response dataclasses in `src/core/llm/base.py`
-- [ ] T042 [P] [US1-6] Implement OpenAIProvider with exponential backoff retry (3 attempts) in `src/core/llm/openai.py`
-- [ ] T043 [P] [US1-6] Implement GeminiProvider with exponential backoff retry (3 attempts) in `src/core/llm/gemini.py`
-- [ ] T044 [S] [US1-6] Create LLM provider factory based on LLM_PROVIDER env var in `src/core/llm/__init__.py`
-- [ ] T045 [S] [US1-6] Write unit tests for LLM abstraction with mocked providers in `tests/unit/test_llm.py`
+- [X] T040 [S] [US1-6] Define LLMProvider Protocol (abstract interface) with complete() method in `src/core/llm/base.py`
+- [X] T041 [S] [US1-6] Define Message and Response dataclasses in `src/core/llm/base.py`
+- [X] T042 [P] [US1-6] Implement OpenAIProvider with exponential backoff retry (3 attempts) in `src/core/llm/openai.py`
+- [X] T043 [P] [US1-6] Implement GeminiProvider with exponential backoff retry (3 attempts) in `src/core/llm/gemini.py`
+- [X] T044 [S] [US1-6] Create LLM provider factory based on LLM_PROVIDER env var in `src/core/llm/__init__.py`
+- [X] T045 [S] [US1-6] Write unit tests for LLM abstraction with mocked providers in `tests/unit/test_llm.py`
 
 ### 1.4 Document Extraction Service
 
-- [ ] T050 [S] [US1] Create PDF text extraction using pdfplumber with page boundaries in `src/services/document.py`
-- [ ] T051 [P] [US1] Create TXT file text extraction with page markers in `src/services/document.py`
-- [ ] T052 [P] [US1] Add PyMuPDF fallback for problematic PDFs in `src/services/document.py`
-- [ ] T053 [S] [US1] Create DocumentInput model for extracted content with page_count in `src/services/document.py`
-- [ ] T054 [S] [US1] Write unit tests for PDF extraction with German characters in `tests/unit/test_document.py`
-- [ ] T055 [P] [US1] Add sample HandelsRegister PDF to test fixtures in `tests/fixtures/`
+- [X] T050 [S] [US1] Create PDF text extraction using pdfplumber with page boundaries in `src/services/document.py`
+- [X] T051 [P] [US1] Create TXT file text extraction with page markers in `src/services/document.py`
+- [X] T052 [P] [US1] Add PyMuPDF fallback for problematic PDFs in `src/services/document.py`
+- [X] T053 [S] [US1] Create DocumentInput model for extracted content with page_count in `src/services/document.py`
+- [X] T054 [S] [US1] Write unit tests for PDF extraction with German characters in `tests/unit/test_document.py`
+- [X] T055 [P] [US1] Add sample HandelsRegister PDF to test fixtures in `tests/fixtures/`
 
 ### 1.5 Fuzzy Matching Service
 
-- [ ] T060 [S] [US2] Implement name normalization (lowercase, unidecode for umlauts) in `src/services/matching.py`
-- [ ] T061 [S] [US2] Implement Jaro-Winkler fuzzy matching with 0.85 threshold in `src/services/matching.py`
-- [ ] T062 [S] [US2] Create is_same_person() function for duplicate detection in `src/services/matching.py`
-- [ ] T063 [S] [US2] Write unit tests for German name matching (Müller/Mueller) in `tests/unit/test_matching.py`
+- [X] T060 [S] [US2] Implement name normalization (lowercase, unidecode for umlauts) in `src/services/matching.py`
+- [X] T061 [S] [US2] Implement Jaro-Winkler fuzzy matching with 0.85 threshold in `src/services/matching.py`
+- [X] T062 [S] [US2] Create is_same_person() function for duplicate detection in `src/services/matching.py`
+- [X] T063 [S] [US2] Write unit tests for German name matching (Müller/Mueller) in `tests/unit/test_matching.py`
 
 ---
 
