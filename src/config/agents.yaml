@@ -1,0 +1,160 @@
+# Agent Configuration for KYC Document Processing Workflow
+# Version: 1.0
+#
+# This file defines all agents in the KYC processing pipeline:
+# 1. extractor - Extracts person data from documents
+# 2. critic_1 - Validates extraction output
+# 3. reconciler - Deduplicates and merges person records
+# 4. critic_2 - Validates reconciliation output
+# 5. classifier - Classifies persons as CSM/NON_CSM
+# 6. critic_3 - Validates classification output
+# 7. formatter - Formats final output
+
+version: "1.0"
+
+agents:
+  extractor:
+    name: extractor
+    type: extractor
+    description: >
+      Extracts person information from KYC documents including names,
+      job titles, dates of birth, nationalities, and addresses.
+      Handles German documents with umlauts and specialized terminology.
+    prompt_file: extractor.md
+    output_schema: ExtractorOutput
+    llm:
+      model: gpt-4
+      temperature: 0
+      max_tokens: 8192
+    retry:
+      max_retries: 4
+      backoff_seconds: 1.0
+
+  critic_1:
+    name: critic_1
+    type: critic
+    description: >
+      Validates extraction output ensuring all mandatory fields are present,
+      source references are provided, and data quality meets standards.
+    prompt_file: critic_1.md
+    validates_phase: extraction
+    validation_rules:
+      - rule_id: mandatory_first_name
+        description: First name must be non-empty
+        severity: error
+      - rule_id: mandatory_last_name
+        description: Last name must be non-empty
+        severity: error
+      - rule_id: source_reference_required
+        description: At least one source reference per person
+        severity: error
+      - rule_id: valid_page_number
+        description: Page number must be >= 1
+        severity: error
+      - rule_id: confidence_threshold
+        description: Confidence score should be >= 0.7 when provided
+        severity: warning
+    llm:
+      model: gpt-4
+      temperature: 0
+      max_tokens: 4096
+
+  reconciler:
+    name: reconciler
+    type: reconciler
+    description: >
+      Identifies and merges duplicate person records using fuzzy name matching.
+      Consolidates source references and flags field conflicts when values differ.
+    prompt_file: reconciler.md
+    matching_threshold: 0.85
+    llm:
+      model: gpt-4
+      temperature: 0
+      max_tokens: 8192
+    retry:
+      max_retries: 4
+      backoff_seconds: 1.0
+
+  critic_2:
+    name: critic_2
+    type: critic
+    description: >
+      Validates reconciliation output checking for missed duplicates,
+      incorrect merges, and lost source references.
+    prompt_file: critic_2.md
+    validates_phase: reconciliation
+    validation_rules:
+      - rule_id: no_missed_duplicates
+        description: All duplicate pairs should be identified and merged
+        severity: error
+      - rule_id: no_incorrect_merges
+        description: Different persons should not be incorrectly merged
+        severity: error
+      - rule_id: source_references_preserved
+        description: All source references should be preserved after merge
+        severity: error
+      - rule_id: conflicts_flagged
+        description: Conflicting field values should be flagged
+        severity: warning
+    llm:
+      model: gpt-4
+      temperature: 0
+      max_tokens: 4096
+
+  classifier:
+    name: classifier
+    type: classifier
+    description: >
+      Classifies each person as CSM (Controlling Senior Manager) or NON_CSM
+      based on official criteria. Provides reasoning citing specific criteria.
+    prompt_file: classifier.md
+    csm_definition_file: csm_definition.md
+    llm:
+      model: gpt-4
+      temperature: 0
+      max_tokens: 8192
+    retry:
+      max_retries: 4
+      backoff_seconds: 1.0
+
+  critic_3:
+    name: critic_3
+    type: critic
+    description: >
+      Validates classification output ensuring reasoning quality,
+      proper criteria citation, and classification consistency.
+    prompt_file: critic_3.md
+    validates_phase: classification
+    validation_rules:
+      - rule_id: classification_present
+        description: Every person must have a classification
+        severity: error
+      - rule_id: reasoning_required
+        description: Reasoning must be non-empty
+        severity: error
+      - rule_id: criteria_cited
+        description: Reasoning must cite specific CSM criteria
+        severity: error
+      - rule_id: consistent_classification
+        description: Classification must match stated criteria
+        severity: error
+      - rule_id: evidence_provided
+        description: Supporting evidence should be provided
+        severity: warning
+    llm:
+      model: gpt-4
+      temperature: 0
+      max_tokens: 4096
+
+  formatter:
+    name: formatter
+    type: formatter
+    description: >
+      Formats the final workflow output including document manifest
+      and separated CSM/NON_CSM person lists.
+    prompt_file: formatter.md
+    output_format: json
+    llm:
+      model: gpt-4
+      temperature: 0
+      max_tokens: 4096

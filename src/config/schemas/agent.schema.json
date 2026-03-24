@@ -1,0 +1,208 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "agent.schema.json",
+  "title": "Agent Configuration Schema",
+  "description": "Schema for validating KYC workflow agent configurations",
+  "definitions": {
+    "agentType": {
+      "type": "string",
+      "enum": ["extractor", "critic", "reconciler", "classifier", "formatter"],
+      "description": "Type of agent determining its core behavior"
+    },
+    "criticPhase": {
+      "type": "string",
+      "enum": ["extraction", "reconciliation", "classification"],
+      "description": "Which workflow phase the critic validates"
+    },
+    "retryConfig": {
+      "type": "object",
+      "properties": {
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 4,
+          "description": "Maximum retry attempts before failing"
+        },
+        "backoff_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "Initial backoff time between retries"
+        }
+      },
+      "additionalProperties": false
+    },
+    "llmConfig": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Model name (e.g., gpt-4, gemini-pro)"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 0,
+          "description": "LLM temperature setting"
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 128000,
+          "default": 4096,
+          "description": "Maximum tokens in LLM response"
+        }
+      },
+      "additionalProperties": false
+    },
+    "baseAgent": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Unique agent identifier"
+        },
+        "type": {
+          "$ref": "#/definitions/agentType"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of agent purpose"
+        },
+        "prompt_file": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+\\.md$",
+          "description": "Markdown file containing the agent prompt"
+        },
+        "llm": {
+          "$ref": "#/definitions/llmConfig"
+        },
+        "retry": {
+          "$ref": "#/definitions/retryConfig"
+        }
+      },
+      "required": ["name", "type", "prompt_file"]
+    },
+    "extractorAgent": {
+      "allOf": [
+        { "$ref": "#/definitions/baseAgent" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "extractor" },
+            "output_schema": {
+              "type": "string",
+              "description": "Reference to output Pydantic model"
+            }
+          }
+        }
+      ]
+    },
+    "criticAgent": {
+      "allOf": [
+        { "$ref": "#/definitions/baseAgent" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "critic" },
+            "validates_phase": {
+              "$ref": "#/definitions/criticPhase"
+            },
+            "validation_rules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "rule_id": { "type": "string" },
+                  "description": { "type": "string" },
+                  "severity": {
+                    "type": "string",
+                    "enum": ["error", "warning"]
+                  }
+                },
+                "required": ["rule_id", "description", "severity"]
+              },
+              "description": "Validation rules for the critic to enforce"
+            }
+          },
+          "required": ["validates_phase"]
+        }
+      ]
+    },
+    "reconcilerAgent": {
+      "allOf": [
+        { "$ref": "#/definitions/baseAgent" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "reconciler" },
+            "matching_threshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.85,
+              "description": "Fuzzy matching threshold for duplicate detection"
+            }
+          }
+        }
+      ]
+    },
+    "classifierAgent": {
+      "allOf": [
+        { "$ref": "#/definitions/baseAgent" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "classifier" },
+            "csm_definition_file": {
+              "type": "string",
+              "description": "Path to CSM criteria definition file"
+            }
+          }
+        }
+      ]
+    },
+    "formatterAgent": {
+      "allOf": [
+        { "$ref": "#/definitions/baseAgent" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "formatter" },
+            "output_format": {
+              "type": "string",
+              "enum": ["json"],
+              "default": "json"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Configuration schema version"
+    },
+    "agents": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "$ref": "#/definitions/extractorAgent" },
+          { "$ref": "#/definitions/criticAgent" },
+          { "$ref": "#/definitions/reconcilerAgent" },
+          { "$ref": "#/definitions/classifierAgent" },
+          { "$ref": "#/definitions/formatterAgent" }
+        ]
+      },
+      "description": "Map of agent name to agent configuration"
+    }
+  },
+  "required": ["version", "agents"],
+  "additionalProperties": false
+}

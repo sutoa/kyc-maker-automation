@@ -91,38 +91,38 @@ LangGraph workflow infrastructure and declarative agent configuration.
 
 ### 2.1 Workflow State Management
 
-- [ ] T070 [S] [US1-6] Define WorkflowState TypedDict per contracts/agents.md in `src/core/state.py`
-- [ ] T071 [S] [US1-6] Create state initialization from uploaded documents in `src/core/state.py`
-- [ ] T072 [S] [US1-6] Create state update helpers for each agent phase in `src/core/state.py`
-- [ ] T073 [S] [US1-6] Write unit tests for state management in `tests/unit/test_state.py`
+- [x] T070 [S] [US1-6] Define WorkflowState TypedDict per contracts/agents.md in `src/core/state.py`
+- [x] T071 [S] [US1-6] Create state initialization from uploaded documents in `src/core/state.py`
+- [x] T072 [S] [US1-6] Create state update helpers for each agent phase in `src/core/state.py`
+- [x] T073 [S] [US1-6] Write unit tests for state management in `tests/unit/test_state.py`
 
 ### 2.2 Agent Configuration (Constitution Principle III)
 
-- [ ] T080 [S] [US1-6] Create JSON schema for agent configuration validation in `src/config/schemas/agent.schema.json`
-- [ ] T081 [S] [US1-6] Create agents.yaml with all 7 agent definitions in `src/config/agents.yaml`
-- [ ] T082 [S] [US1-6] Create workflows.yaml with transition rules in `src/config/workflows.yaml`
-- [ ] T083 [S] [US1-6] Create config loader with schema validation in `src/config/loader.py`
-- [ ] T084 [S] [US1-6] Write unit tests for config loading and validation in `tests/unit/test_config.py`
+- [x] T080 [S] [US1-6] Create JSON schema for agent configuration validation in `src/config/schemas/agent.schema.json`
+- [x] T081 [S] [US1-6] Create agents.yaml with all 7 agent definitions in `src/config/agents.yaml`
+- [x] T082 [S] [US1-6] Create workflows.yaml with transition rules in `src/config/workflows.yaml`
+- [x] T083 [S] [US1-6] Create config loader with schema validation in `src/config/loader.py`
+- [x] T084 [S] [US1-6] Write unit tests for config loading and validation in `tests/unit/test_config.py`
 
 ### 2.3 Prompt Management
 
-- [ ] T090 [P] [US1] Create extractor.md prompt with German term glossary in `src/prompts/extractor.md`
-- [ ] T091 [P] [US1] Create critic_1.md prompt for extraction validation in `src/prompts/critic_1.md`
-- [ ] T092 [P] [US2] Create reconciler.md prompt for deduplication in `src/prompts/reconciler.md`
-- [ ] T093 [P] [US2] Create critic_2.md prompt for reconciliation validation in `src/prompts/critic_2.md`
-- [ ] T094 [P] [US3] Create classifier.md prompt with CSM criteria in `src/prompts/classifier.md`
-- [ ] T095 [P] [US3] Create critic_3.md prompt for classification validation in `src/prompts/critic_3.md`
-- [ ] T096 [P] [US3] Create csm_definition.md with official CSM criteria in `src/prompts/csm_definition.md`
-- [ ] T097 [P] [US4] Create formatter.md prompt for output generation in `src/prompts/formatter.md`
+- [x] T090 [P] [US1] Create extractor.md prompt with German term glossary in `src/prompts/extractor.md`
+- [x] T091 [P] [US1] Create critic_1.md prompt for extraction validation in `src/prompts/critic_1.md`
+- [x] T092 [P] [US2] Create reconciler.md prompt for deduplication in `src/prompts/reconciler.md`
+- [x] T093 [P] [US2] Create critic_2.md prompt for reconciliation validation in `src/prompts/critic_2.md`
+- [x] T094 [P] [US3] Create classifier.md prompt with CSM criteria in `src/prompts/classifier.md`
+- [x] T095 [P] [US3] Create critic_3.md prompt for classification validation in `src/prompts/critic_3.md`
+- [x] T096 [P] [US3] Create csm_definition.md with official CSM criteria in `src/prompts/csm_definition.md`
+- [x] T097 [P] [US4] Create formatter.md prompt for output generation in `src/prompts/formatter.md`
 
 ### 2.4 LangGraph Workflow Engine
 
-- [ ] T100 [S] [US1-6] Create base agent node wrapper with logging and state updates in `src/core/workflow.py`
-- [ ] T101 [S] [US1-6] Create critic node wrapper with 3-outcome routing in `src/core/workflow.py`
-- [ ] T102 [S] [US1-6] Create conditional edge functions for pass/fail_retry/fail_max in `src/core/workflow.py`
-- [ ] T103 [S] [US1-6] Build LangGraph StateGraph with all agents and transitions in `src/core/workflow.py`
-- [ ] T104 [S] [US1-6] Add retry counter increment logic in transitions in `src/core/workflow.py`
-- [ ] T105 [S] [US1-6] Write integration test for workflow graph compilation in `tests/integration/test_workflow.py`
+- [x] T100 [S] [US1-6] Create base agent node wrapper with logging and state updates in `src/core/workflow.py`
+- [x] T101 [S] [US1-6] Create critic node wrapper with 3-outcome routing in `src/core/workflow.py`
+- [x] T102 [S] [US1-6] Create conditional edge functions for pass/fail_retry/fail_max in `src/core/workflow.py`
+- [x] T103 [S] [US1-6] Build LangGraph StateGraph with all agents and transitions in `src/core/workflow.py`
+- [x] T104 [S] [US1-6] Add retry counter increment logic in transitions in `src/core/workflow.py`
+- [x] T105 [S] [US1-6] Write integration test for workflow graph compilation in `tests/integration/test_workflow.py`
 
 ---
 
@@ -130,30 +130,30 @@ LangGraph workflow infrastructure and declarative agent configuration.
 
 ### 3.1 Extractor Agent
 
-- [ ] T110 [S] [US1] Implement ExtractorInput/ExtractorOutput models per contracts/agents.md in `src/agents/extractor.py`
-- [ ] T111 [S] [US1] Implement extractor agent calling LLM with document content in `src/agents/extractor.py`
-- [ ] T112 [S] [US1] Parse LLM response into ExtractedPerson list with source references in `src/agents/extractor.py`
-- [ ] T113 [S] [US1] Handle retry feedback from critic in subsequent attempts in `src/agents/extractor.py`
-- [ ] T114 [S] [US1] Write contract test: verify mandatory fields extracted in `tests/contract/test_extractor.py`
-- [ ] T115 [S] [US1] Write contract test: verify source references populated in `tests/contract/test_extractor.py`
-- [ ] T116 [S] [US1] Write integration test with German HandelsRegister document in `tests/integration/test_extractor.py`
+- [x] T110 [S] [US1] Implement ExtractorInput/ExtractorOutput models per contracts/agents.md in `src/agents/extractor.py`
+- [x] T111 [S] [US1] Implement extractor agent calling LLM with document content in `src/agents/extractor.py`
+- [x] T112 [S] [US1] Parse LLM response into ExtractedPerson list with source references in `src/agents/extractor.py`
+- [x] T113 [S] [US1] Handle retry feedback from critic in subsequent attempts in `src/agents/extractor.py`
+- [x] T114 [S] [US1] Write contract test: verify mandatory fields extracted in `tests/contract/test_extractor.py`
+- [x] T115 [S] [US1] Write contract test: verify source references populated in `tests/contract/test_extractor.py`
+- [x] T116 [S] [US1] Write integration test with German HandelsRegister document in `tests/integration/test_pdf_extraction.py`
 
 ### 3.2 Critic 1 Agent (Extraction Validator)
 
-- [ ] T120 [S] [US1] Implement Critic1Input/Critic1Output models per contracts/agents.md in `src/agents/critic.py`
-- [ ] T121 [S] [US1] Implement critic_1 validation logic (mandatory fields, source refs) in `src/agents/critic.py`
-- [ ] T122 [S] [US1] Generate ExtractionIssue list with severity levels in `src/agents/critic.py`
-- [ ] T123 [S] [US1] Implement 3-outcome decision logic (pass/fail_retry/fail_max) in `src/agents/critic.py`
-- [ ] T124 [S] [US1] Write contract test: pass when all fields present in `tests/contract/test_critic_1.py`
-- [ ] T125 [S] [US1] Write contract test: fail_retry on missing fields in `tests/contract/test_critic_1.py`
-- [ ] T126 [S] [US1] Write contract test: fail_max after 4 retries in `tests/contract/test_critic_1.py`
+- [x] T120 [S] [US1] Implement Critic1Input/Critic1Output models per contracts/agents.md in `src/agents/critic.py`
+- [x] T121 [S] [US1] Implement critic_1 validation logic (mandatory fields, source refs) in `src/agents/critic.py`
+- [x] T122 [S] [US1] Generate ExtractionIssue list with severity levels in `src/agents/critic.py`
+- [x] T123 [S] [US1] Implement 3-outcome decision logic (pass/fail_retry/fail_max) in `src/agents/critic.py`
+- [x] T124 [S] [US1] Write contract test: pass when all fields present in `tests/contract/test_critic_1.py`
+- [x] T125 [S] [US1] Write contract test: fail_retry on missing fields in `tests/contract/test_critic_1.py`
+- [x] T126 [S] [US1] Write contract test: fail_max after 4 retries in `tests/contract/test_critic_1.py`
 
 ### 3.3 Extraction Integration
 
-- [ ] T130 [S] [US1] Wire extractor → critic_1 → extractor retry loop in workflow in `src/core/workflow.py`
-- [ ] T131 [S] [US1] Write end-to-end test: successful extraction flow in `tests/integration/test_extraction_flow.py`
-- [ ] T132 [S] [US1] Write end-to-end test: extraction retry with critic feedback in `tests/integration/test_extraction_flow.py`
-- [ ] T133 [S] [US1] Write end-to-end test: extraction failure after max retries in `tests/integration/test_extraction_flow.py`
+- [x] T130 [S] [US1] Wire extractor → critic_1 → extractor retry loop in workflow in `src/core/workflow.py`
+- [x] T131 [S] [US1] Write end-to-end test: successful extraction flow in `tests/integration/test_extraction_flow.py`
+- [x] T132 [S] [US1] Write end-to-end test: extraction retry with critic feedback in `tests/integration/test_extraction_flow.py`
+- [x] T133 [S] [US1] Write end-to-end test: extraction failure after max retries in `tests/integration/test_extraction_flow.py`
 
 ---
 
@@ -161,29 +161,29 @@ LangGraph workflow infrastructure and declarative agent configuration.
 
 ### 4.1 Reconciler Agent
 
-- [ ] T140 [S] [US2] Implement ReconcilerInput/ReconcilerOutput models per contracts/agents.md in `src/agents/reconciler.py`
-- [ ] T141 [S] [US2] Implement duplicate detection using fuzzy matching service in `src/agents/reconciler.py`
-- [ ] T142 [S] [US2] Implement source reference consolidation for merged records in `src/agents/reconciler.py`
-- [ ] T143 [S] [US2] Implement conflict detection when same field has different values in `src/agents/reconciler.py`
-- [ ] T144 [S] [US2] Generate DuplicateGroup audit trail for merged records in `src/agents/reconciler.py`
-- [ ] T145 [S] [US2] Handle retry feedback from critic in subsequent attempts in `src/agents/reconciler.py`
-- [ ] T146 [S] [US2] Write contract test: duplicates merged with consolidated sources in `tests/contract/test_reconciler.py`
-- [ ] T147 [S] [US2] Write contract test: conflicts flagged with both values in `tests/contract/test_reconciler.py`
+- [x] T140 [S] [US2] Implement ReconcilerInput/ReconcilerOutput models per contracts/agents.md in `src/agents/reconciler.py`
+- [x] T141 [S] [US2] Implement duplicate detection using fuzzy matching service in `src/agents/reconciler.py`
+- [x] T142 [S] [US2] Implement source reference consolidation for merged records in `src/agents/reconciler.py`
+- [x] T143 [S] [US2] Implement conflict detection when same field has different values in `src/agents/reconciler.py`
+- [x] T144 [S] [US2] Generate DuplicateGroup audit trail for merged records in `src/agents/reconciler.py`
+- [x] T145 [S] [US2] Handle retry feedback from critic in subsequent attempts in `src/agents/reconciler.py`
+- [x] T146 [S] [US2] Write contract test: duplicates merged with consolidated sources in `tests/contract/test_reconciler.py`
+- [x] T147 [S] [US2] Write contract test: conflicts flagged with both values in `tests/contract/test_reconciler.py`
 
 ### 4.2 Critic 2 Agent (Reconciliation Validator)
 
-- [ ] T150 [S] [US2] Implement Critic2Input/Critic2Output models per contracts/agents.md in `src/agents/critic.py`
-- [ ] T151 [S] [US2] Implement critic_2 validation logic (missed duplicates, lost sources) in `src/agents/critic.py`
-- [ ] T152 [S] [US2] Generate ReconciliationIssue list with evidence in `src/agents/critic.py`
-- [ ] T153 [S] [US2] Implement 3-outcome decision logic in `src/agents/critic.py`
-- [ ] T154 [S] [US2] Write contract test: pass when deduplication correct in `tests/contract/test_critic_2.py`
-- [ ] T155 [S] [US2] Write contract test: fail_retry on missed duplicates in `tests/contract/test_critic_2.py`
+- [x] T150 [S] [US2] Implement Critic2Input/Critic2Output models per contracts/agents.md in `src/agents/critic.py`
+- [x] T151 [S] [US2] Implement critic_2 validation logic (missed duplicates, lost sources) in `src/agents/critic.py`
+- [x] T152 [S] [US2] Generate ReconciliationIssue list with evidence in `src/agents/critic.py`
+- [x] T153 [S] [US2] Implement 3-outcome decision logic in `src/agents/critic.py`
+- [x] T154 [S] [US2] Write contract test: pass when deduplication correct in `tests/contract/test_critic_2.py`
+- [x] T155 [S] [US2] Write contract test: fail_retry on missed duplicates in `tests/contract/test_critic_2.py`
 
 ### 4.3 Reconciliation Integration
 
-- [ ] T160 [S] [US2] Wire reconciler → critic_2 → reconciler retry loop in workflow in `src/core/workflow.py`
-- [ ] T161 [S] [US2] Write end-to-end test: successful reconciliation flow in `tests/integration/test_reconciliation_flow.py`
-- [ ] T162 [S] [US2] Write end-to-end test: reconciliation with German name variants in `tests/integration/test_reconciliation_flow.py`
+- [x] T160 [S] [US2] Wire reconciler → critic_2 → reconciler retry loop in workflow in `src/core/workflow.py`
+- [x] T161 [S] [US2] Write end-to-end test: successful reconciliation flow in `tests/integration/test_reconciliation_flow.py`
+- [x] T162 [S] [US2] Write end-to-end test: reconciliation with German name variants in `tests/integration/test_reconciliation_flow.py`
 
 ---
 
@@ -191,29 +191,29 @@ LangGraph workflow infrastructure and declarative agent configuration.
 
 ### 5.1 Classifier Agent
 
-- [ ] T170 [S] [US3] Implement ClassifierInput/ClassifierOutput models per contracts/agents.md in `src/agents/classifier.py`
-- [ ] T171 [S] [US3] Implement classifier agent calling LLM with CSM definition in `src/agents/classifier.py`
-- [ ] T172 [S] [US3] Parse LLM response into ClassifiedPerson with reasoning in `src/agents/classifier.py`
-- [ ] T173 [S] [US3] Validate each person gets exactly one classification in `src/agents/classifier.py`
-- [ ] T174 [S] [US3] Handle retry feedback from critic in subsequent attempts in `src/agents/classifier.py`
-- [ ] T175 [S] [US3] Write contract test: CSM classification with valid reasoning in `tests/contract/test_classifier.py`
-- [ ] T176 [S] [US3] Write contract test: NON_CSM classification with valid reasoning in `tests/contract/test_classifier.py`
-- [ ] T177 [S] [US3] Write contract test: German job titles mapped correctly in `tests/contract/test_classifier.py`
+- [x] T170 [S] [US3] Implement ClassifierInput/ClassifierOutput models per contracts/agents.md in `src/agents/classifier.py`
+- [x] T171 [S] [US3] Implement classifier agent calling LLM with CSM definition in `src/agents/classifier.py`
+- [x] T172 [S] [US3] Parse LLM response into ClassifiedPerson with reasoning in `src/agents/classifier.py`
+- [x] T173 [S] [US3] Validate each person gets exactly one classification in `src/agents/classifier.py`
+- [x] T174 [S] [US3] Handle retry feedback from critic in subsequent attempts in `src/agents/classifier.py`
+- [x] T175 [S] [US3] Write contract test: CSM classification with valid reasoning in `tests/contract/test_classifier.py`
+- [x] T176 [S] [US3] Write contract test: NON_CSM classification with valid reasoning in `tests/contract/test_classifier.py`
+- [x] T177 [S] [US3] Write contract test: German job titles mapped correctly in `tests/contract/test_classifier.py`
 
 ### 5.2 Critic 3 Agent (Classification Validator)
 
-- [ ] T180 [S] [US3] Implement Critic3Input/Critic3Output models per contracts/agents.md in `src/agents/critic.py`
-- [ ] T181 [S] [US3] Implement critic_3 validation logic (reasoning quality, criteria citation) in `src/agents/critic.py`
-- [ ] T182 [S] [US3] Generate ClassificationIssue list with suggested corrections in `src/agents/critic.py`
-- [ ] T183 [S] [US3] Implement 3-outcome decision logic in `src/agents/critic.py`
-- [ ] T184 [S] [US3] Write contract test: pass when reasoning cites criteria in `tests/contract/test_critic_3.py`
-- [ ] T185 [S] [US3] Write contract test: fail_retry on weak reasoning in `tests/contract/test_critic_3.py`
+- [x] T180 [S] [US3] Implement Critic3Input/Critic3Output models per contracts/agents.md in `src/agents/critic.py`
+- [x] T181 [S] [US3] Implement critic_3 validation logic (reasoning quality, criteria citation) in `src/agents/critic.py`
+- [x] T182 [S] [US3] Generate ClassificationIssue list with suggested corrections in `src/agents/critic.py`
+- [x] T183 [S] [US3] Implement 3-outcome decision logic in `src/agents/critic.py`
+- [x] T184 [S] [US3] Write contract test: pass when reasoning cites criteria in `tests/contract/test_critic_3.py`
+- [x] T185 [S] [US3] Write contract test: fail_retry on weak reasoning in `tests/contract/test_critic_3.py`
 
 ### 5.3 Classification Integration
 
-- [ ] T190 [S] [US3] Wire classifier → critic_3 → classifier retry loop in workflow in `src/core/workflow.py`
-- [ ] T191 [S] [US3] Write end-to-end test: successful classification flow in `tests/integration/test_classification_flow.py`
-- [ ] T192 [S] [US3] Write end-to-end test: classification with insufficient info in `tests/integration/test_classification_flow.py`
+- [x] T190 [S] [US3] Wire classifier → critic_3 → classifier retry loop in workflow in `src/core/workflow.py`
+- [x] T191 [S] [US3] Write end-to-end test: successful classification flow in `tests/integration/test_classification_flow.py`
+- [x] T192 [S] [US3] Write end-to-end test: classification with insufficient info in `tests/integration/test_classification_flow.py`
 
 ---
 
@@ -221,24 +221,24 @@ LangGraph workflow infrastructure and declarative agent configuration.
 
 ### 6.1 Output Formatter Agent
 
-- [ ] T200 [S] [US4] Implement FormatterInput/FormatterOutput models per contracts/agents.md in `src/agents/formatter.py`
-- [ ] T201 [S] [US4] Generate DocumentManifestEntry for each uploaded document in `src/agents/formatter.py`
-- [ ] T202 [S] [US4] Split classified persons into csm_list and non_csm_list in `src/agents/formatter.py`
-- [ ] T203 [S] [US4] Validate mutual exclusivity (no person in both lists) in `src/agents/formatter.py`
-- [ ] T204 [S] [US4] Write contract test: output schema matches contracts/api.md in `tests/contract/test_formatter.py`
-- [ ] T205 [S] [US4] Write contract test: document manifest complete in `tests/contract/test_formatter.py`
+- [x] T200 [S] [US4] Implement FormatterInput/FormatterOutput models per contracts/agents.md in `src/agents/formatter.py`
+- [x] T201 [S] [US4] Generate DocumentManifestEntry for each uploaded document in `src/agents/formatter.py`
+- [x] T202 [S] [US4] Split classified persons into csm_list and non_csm_list in `src/agents/formatter.py`
+- [x] T203 [S] [US4] Validate mutual exclusivity (no person in both lists) in `src/agents/formatter.py`
+- [x] T204 [S] [US4] Write contract test: output schema matches contracts/api.md in `tests/contract/test_formatter.py`
+- [x] T205 [S] [US4] Write contract test: document manifest complete in `tests/contract/test_formatter.py`
 
 ### 6.2 Output Persistence
 
-- [ ] T210 [S] [US4] Save workflow output JSON to filesystem in `src/services/storage.py`
-- [ ] T211 [S] [US4] Update WorkflowRun with output_json_path on completion in `src/services/storage.py`
-- [ ] T212 [S] [US4] Write unit test for output persistence in `tests/unit/test_output.py`
+- [x] T210 [S] [US4] Save workflow output JSON to filesystem in `src/services/storage.py`
+- [x] T211 [S] [US4] Update WorkflowRun with output_json_path on completion in `src/services/storage.py`
+- [x] T212 [S] [US4] Write unit test for output persistence in `tests/unit/test_output.py`
 
 ### 6.3 Full Workflow Integration
 
-- [ ] T220 [S] [US1-4] Wire formatter as final node in workflow graph in `src/core/workflow.py`
-- [ ] T221 [S] [US1-4] Write end-to-end test: complete workflow success in `tests/integration/test_full_workflow.py`
-- [ ] T222 [S] [US1-4] Write end-to-end test: workflow failure handling in `tests/integration/test_full_workflow.py`
+- [x] T220 [S] [US1-4] Wire formatter as final node in workflow graph in `src/core/workflow.py`
+- [x] T221 [S] [US1-4] Write end-to-end test: complete workflow success in `tests/integration/test_workflow.py`
+- [x] T222 [S] [US1-4] Write end-to-end test: workflow failure handling in `tests/integration/test_workflow.py`
 
 ---
 

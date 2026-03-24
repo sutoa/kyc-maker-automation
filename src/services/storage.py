@@ -445,3 +445,99 @@ def save_workflow_output(
         db.commit()
         db.refresh(workflow)
     return workflow
+
+
+# --- Output Persistence Functions ---
+
+from pathlib import Path
+
+
+def save_output_json(
+    workflow_id: str,
+    output_data: dict[str, Any],
+    output_dir: str | Path = "outputs",
+) -> Path:
+    """Save workflow output JSON to filesystem.
+
+    Args:
+        workflow_id: Unique workflow identifier.
+        output_data: Workflow output data to save.
+        output_dir: Directory to save output files.
+
+    Returns:
+        Path to the saved JSON file.
+    """
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    filename = f"workflow_{workflow_id}_output.json"
+    file_path = output_path / filename
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(output_data, f, indent=2, ensure_ascii=False, default=str)
+
+    return file_path
+
+
+def persist_workflow_output(
+    workflow_id: str,
+    document_manifest: list[dict[str, Any]],
+    csm_list: list[dict[str, Any]],
+    non_csm_list: list[dict[str, Any]],
+    output_dir: str | Path = "outputs",
+    db: Session | None = None,
+) -> Path:
+    """Persist complete workflow output to filesystem and optionally update DB.
+
+    This function:
+    1. Creates the output JSON structure
+    2. Saves it to the filesystem
+    3. Optionally updates the WorkflowRun with the output path
+
+    Args:
+        workflow_id: Unique workflow identifier.
+        document_manifest: List of document manifest entries.
+        csm_list: List of CSM classified persons.
+        non_csm_list: List of NON_CSM classified persons.
+        output_dir: Directory to save output files.
+        db: Optional database session for updating WorkflowRun.
+
+    Returns:
+        Path to the saved JSON file.
+    """
+    output_data = {
+        "workflow_id": workflow_id,
+        "generated_at": datetime.utcnow().isoformat(),
+        "document_manifest": document_manifest,
+        "csm_list": csm_list,
+        "non_csm_list": non_csm_list,
+        "summary": {
+            "total_documents": len(document_manifest),
+            "total_csm": len(csm_list),
+            "total_non_csm": len(non_csm_list),
+        },
+    }
+
+    file_path = save_output_json(workflow_id, output_data, output_dir)
+
+    if db is not None:
+        save_workflow_output(db, workflow_id, str(file_path))
+
+    return file_path
+
+
+def load_workflow_output(file_path: str | Path) -> dict[str, Any]:
+    """Load workflow output JSON from filesystem.
+
+    Args:
+        file_path: Path to the output JSON file.
+
+    Returns:
+        Loaded output data.
+
+    Raises:
+        FileNotFoundError: If file doesn't exist.
+        json.JSONDecodeError: If file is not valid JSON.
+    """
+    with open(file_path, "r", encoding="utf-8") as f:
+        return json.load(f)

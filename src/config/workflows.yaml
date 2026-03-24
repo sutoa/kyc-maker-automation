@@ -1,0 +1,155 @@
+# Workflow Configuration for KYC Document Processing
+# Version: 1.0
+#
+# Defines the state machine transitions for the KYC processing workflow.
+# The workflow follows an actor-critic pattern where each processing agent
+# is followed by a critic agent that validates its output.
+#
+# Flow: extractor -> critic_1 -> reconciler -> critic_2 -> classifier -> critic_3 -> formatter
+#
+# Critic Decision Outcomes:
+# - pass: Proceed to next agent
+# - fail_retry: Return to previous agent with feedback (if retries available)
+# - fail_max: Workflow fails (max retries exceeded)
+
+version: "1.0"
+
+workflows:
+  kyc_document_processing:
+    name: KYC Document Processing
+    description: >
+      Multi-agent workflow for extracting, reconciling, and classifying
+      persons from KYC documents with critic validation at each stage.
+
+    initial_state: extractor
+    terminal_states:
+      - COMPLETED
+      - FAILED
+
+    # Maximum retries before critic issues fail_max decision
+    max_retries: 4
+
+    # Agent transitions define the workflow graph
+    transitions:
+      # Extraction Phase
+      extractor:
+        on_complete: critic_1
+        description: Extract person data from documents
+
+      critic_1:
+        on_pass: reconciler
+        on_fail_retry: extractor
+        on_fail_max: FAILED
+        description: Validate extraction output
+
+      # Reconciliation Phase
+      reconciler:
+        on_complete: critic_2
+        description: Deduplicate and merge person records
+
+      critic_2:
+        on_pass: classifier
+        on_fail_retry: reconciler
+        on_fail_max: FAILED
+        description: Validate reconciliation output
+
+      # Classification Phase
+      classifier:
+        on_complete: critic_3
+        description: Classify persons as CSM/NON_CSM
+
+      critic_3:
+        on_pass: formatter
+        on_fail_retry: classifier
+        on_fail_max: FAILED
+        description: Validate classification output
+
+      # Output Phase
+      formatter:
+        on_complete: COMPLETED
+        description: Format final output
+
+    # State descriptions for monitoring and logging
+    states:
+      extractor:
+        phase: extraction
+        description: Extracting person data from documents
+      critic_1:
+        phase: extraction
+        description: Validating extraction results
+      reconciler:
+        phase: reconciliation
+        description: Deduplicating person records
+      critic_2:
+        phase: reconciliation
+        description: Validating reconciliation results
+      classifier:
+        phase: classification
+        description: Classifying persons as CSM/NON_CSM
+      critic_3:
+        phase: classification
+        description: Validating classification results
+      formatter:
+        phase: output
+        description: Formatting final output
+      COMPLETED:
+        phase: terminal
+        description: Workflow completed successfully
+      FAILED:
+        phase: terminal
+        description: Workflow failed
+
+# Event hooks for monitoring and audit
+events:
+  - name: agent_started
+    description: Fired when an agent begins processing
+    payload:
+      - workflow_id
+      - agent_name
+      - timestamp
+      - retry_count
+
+  - name: agent_completed
+    description: Fired when an agent completes processing
+    payload:
+      - workflow_id
+      - agent_name
+      - timestamp
+      - duration_ms
+      - output_summary
+
+  - name: critic_decision
+    description: Fired when a critic makes a decision
+    payload:
+      - workflow_id
+      - critic_name
+      - decision
+      - issues_count
+      - feedback
+
+  - name: retry_triggered
+    description: Fired when a retry is triggered
+    payload:
+      - workflow_id
+      - agent_name
+      - retry_count
+      - feedback
+
+  - name: workflow_completed
+    description: Fired when workflow completes successfully
+    payload:
+      - workflow_id
+      - timestamp
+      - duration_seconds
+      - person_count
+      - csm_count
+      - non_csm_count
+
+  - name: workflow_failed
+    description: Fired when workflow fails
+    payload:
+      - workflow_id
+      - timestamp
+      - failure_reason
+      - failed_at_agent
+      - retry_count
