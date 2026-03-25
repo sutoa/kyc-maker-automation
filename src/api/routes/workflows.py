@@ -9,6 +9,7 @@ Endpoints:
 - GET /workflows/{id}/trace - Get detailed execution trace
 """
 
+import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -17,6 +18,8 @@ from typing import Any
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 from src.api.dependencies import AppSettings, DbSession, validate_file_size, validate_file_type
 from src.api.errors import ErrorCode
@@ -225,6 +228,7 @@ async def create_workflow(
 
     Creates a new workflow run and stores the uploaded documents for processing.
     """
+    logger.info(f"Creating workflow with {len(files)} file(s)")
     if not files:
         raise HTTPException(
             status_code=400,
@@ -320,6 +324,7 @@ async def start_workflow(
 
     Triggers the document processing pipeline for the specified workflow.
     """
+    logger.info(f"[{workflow_id}] Starting workflow")
     workflow = get_workflow_run(db, workflow_id)
     if not workflow:
         raise_workflow_not_found(workflow_id)

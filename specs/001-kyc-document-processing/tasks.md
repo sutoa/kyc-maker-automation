@@ -312,21 +312,21 @@ LangGraph workflow infrastructure and declarative agent configuration.
 
 ### 10.1 Error Handling
 
-- [ ] T300 [S] [US1-6] Implement LLM_SERVICE_UNAVAILABLE error for API failures in `src/core/llm/base.py`
-- [ ] T301 [S] [US1-6] Implement workflow failure with detailed error messages in `src/core/workflow.py`
-- [ ] T302 [S] [US1-6] Add logging throughout application in `src/`
+- [X] T300 [S] [US1-6] Implement LLM_SERVICE_UNAVAILABLE error for API failures in `src/core/llm/base.py`
+- [X] T301 [S] [US1-6] Implement workflow failure with detailed error messages in `src/core/workflow.py`
+- [X] T302 [S] [US1-6] Add logging throughout application in `src/`
 
 ### 10.2 Testing Coverage
 
-- [ ] T310 [P] [US1-6] Ensure 80%+ code coverage in `tests/`
-- [ ] T311 [P] [US1] Add edge case: document with no persons in `tests/integration/`
-- [ ] T312 [P] [US1] Add edge case: corrupted PDF handling in `tests/integration/`
-- [ ] T313 [P] [US3] Add edge case: person without job title in `tests/integration/`
+- [X] T310 [P] [US1-6] Ensure 80%+ code coverage in `tests/`
+- [X] T311 [P] [US1] Add edge case: document with no persons in `tests/integration/`
+- [X] T312 [P] [US1] Add edge case: corrupted PDF handling in `tests/integration/`
+- [X] T313 [P] [US3] Add edge case: person without job title in `tests/integration/`
 
 ### 10.3 Finalization
 
-- [ ] T320 [S] Update CLAUDE.md with project specifics in `./CLAUDE.md`
-- [ ] T321 [S] Review and finalize quickstart.md in `specs/001-kyc-document-processing/quickstart.md`
+- [X] T320 [S] Update CLAUDE.md with project specifics in `./CLAUDE.md`
+- [X] T321 [S] Review and finalize quickstart.md in `specs/001-kyc-document-processing/quickstart.md`
 
 ---
 

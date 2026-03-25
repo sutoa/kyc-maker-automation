@@ -4,8 +4,11 @@ This module implements the LLMProvider interface for OpenAI models
 with exponential backoff retry logic (3 attempts).
 """
 
+import logging
 import os
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from tenacity import (
     retry,
@@ -152,6 +155,7 @@ class OpenAIProvider(LLMProvider):
             )
         except (APIConnectionError, APIStatusError) as e:
             # After 3 retries, convert to service unavailable
+            logger.error(f"OpenAI service unavailable after 3 retries: {e}")
             raise LLMServiceUnavailableError(
                 f"OpenAI service unavailable after 3 retries: {e}"
             )

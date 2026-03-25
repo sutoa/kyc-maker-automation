@@ -7,10 +7,13 @@ for German names (umlauts, common variations).
 Uses Jaro-Winkler similarity with a 0.85 threshold as per research.md.
 """
 
+import logging
 from dataclasses import dataclass
 
 from rapidfuzz.distance import JaroWinkler
 from unidecode import unidecode
+
+logger = logging.getLogger(__name__)
 
 # Default similarity threshold for duplicate detection
 DEFAULT_THRESHOLD = 0.85
@@ -183,6 +186,8 @@ def find_duplicates(
     if not persons:
         return []
 
+    logger.debug(f"Finding duplicates among {len(persons)} persons (threshold={threshold})")
+
     # Track which indices have been assigned to a group
     assigned = set()
     groups = []
@@ -203,8 +208,12 @@ def find_duplicates(
             if is_same_person(first1, last1, first2, last2, threshold):
                 group.append(j)
                 assigned.add(j)
+                logger.debug(
+                    f"Duplicate found: '{first1} {last1}' matches '{first2} {last2}'"
+                )
 
         if len(group) > 1:
             groups.append(group)
 
+    logger.debug(f"Found {len(groups)} duplicate group(s)")
     return groups

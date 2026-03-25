@@ -4,8 +4,11 @@ This module implements the LLMProvider interface for Google Gemini models
 with exponential backoff retry logic (3 attempts).
 """
 
+import logging
 import os
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from tenacity import (
     retry,
@@ -214,6 +217,7 @@ class GeminiProvider(LLMProvider):
 
         except GoogleAPICallError as e:
             # After 3 retries, convert to service unavailable
+            logger.error(f"Gemini service unavailable after 3 retries: {e}")
             raise LLMServiceUnavailableError(
                 f"Gemini service unavailable after 3 retries: {e}"
             )

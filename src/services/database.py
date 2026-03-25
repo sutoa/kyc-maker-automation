@@ -4,12 +4,15 @@ This module provides SQLAlchemy database configuration for SQLite storage
 of workflow state and audit logs.
 """
 
+import logging
 import os
 from contextlib import contextmanager
 from typing import Generator
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
+
+logger = logging.getLogger(__name__)
 
 # Get database URL from environment, default to SQLite for development
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./kyc_workflows.db")
@@ -78,7 +81,9 @@ def init_db() -> None:
     """
     from . import storage  # noqa: F401 - Import to register models
 
+    logger.info(f"Initializing database: {DATABASE_URL}")
     Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
 
 
 def drop_db() -> None:

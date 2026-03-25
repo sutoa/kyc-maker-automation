@@ -1,7 +1,8 @@
 # Quickstart: KYC Document Processing
 
-**Date**: 2025-03-22
+**Date**: 2026-03-24
 **Feature**: 001-kyc-document-processing
+**Status**: Implementation Complete (Phases 0-10)
 
 ## Prerequisites
 
@@ -191,7 +192,17 @@ The system handles German characters (ä, ö, ü, ß) automatically. If you see 
 1. Review the [API Documentation](./contracts/api.md) for all endpoints
 2. Customize agent prompts in `src/prompts/` for your specific CSM definition
 3. Add sample HandelsRegister documents to `tests/fixtures/` for testing
-4. Configure the observability UI (see User Story 5/6)
+4. Connect to WebSocket endpoint for real-time workflow monitoring
+5. Review audit logs for compliance verification (7-year retention policy)
+
+## Key Features Implemented
+
+- **Multi-Agent Workflow**: Extractor → Critic 1 → Reconciler → Critic 2 → Classifier → Critic 3 → Formatter
+- **Real-Time Updates**: WebSocket events for workflow progress
+- **Audit Trail**: Immutable SHA-256 checksummed logs with 7-year retention
+- **Fuzzy Matching**: Jaro-Winkler duplicate detection for German names
+- **LLM Abstraction**: Supports OpenAI and Google Gemini with automatic retry
+- **REST API**: Full CRUD operations with Swagger/ReDoc documentation
 
 ## Project Structure
 

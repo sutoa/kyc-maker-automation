@@ -12,9 +12,12 @@ Data Retention Policy (FR-029):
 
 import hashlib
 import json
+import logging
 import uuid
 from datetime import datetime, timedelta
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy import (
     JSON,
@@ -282,6 +285,7 @@ def create_workflow_run(db: Session) -> WorkflowRunDB:
     db.add(workflow)
     db.commit()
     db.refresh(workflow)
+    logger.info(f"Created workflow run: {workflow.id}")
     return workflow
 
 
@@ -299,6 +303,7 @@ def update_workflow_status(
     """Update workflow status."""
     workflow = get_workflow_run(db, workflow_id)
     if workflow:
+        old_status = workflow.status
         workflow.status = status
         if status == WorkflowStatus.IN_PROGRESS and workflow.started_at is None:
             workflow.started_at = datetime.utcnow()
@@ -316,6 +321,13 @@ def update_workflow_status(
             workflow.failure_reason = failure_reason
         db.commit()
         db.refresh(workflow)
+        logger.info(
+            f"[{workflow_id}] Workflow status updated: {old_status.value} -> {status.value}"
+        )
+        if failure_reason:
+            logger.warning(f"[{workflow_id}] Failure reason: {failure_reason}")
+    else:
+        logger.warning(f"Workflow not found for status update: {workflow_id}")
     return workflow
 
 
