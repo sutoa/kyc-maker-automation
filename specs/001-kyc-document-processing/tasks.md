@@ -294,17 +294,17 @@ LangGraph workflow infrastructure and declarative agent configuration.
 
 ### 9.1 Audit Logging
 
-- [ ] T280 [S] [US1-6] Create AuditLog service with immutable insert in `src/services/audit.py`
-- [ ] T281 [S] [US1-6] Implement SHA-256 checksum for log integrity in `src/services/audit.py`
-- [ ] T282 [S] [US1-6] Log agent actions with timestamps, inputs, outputs in `src/services/audit.py`
-- [ ] T283 [S] [US1-6] Log all retry cycles with feedback in `src/services/audit.py`
-- [ ] T284 [S] [US1-6] Wire audit logging into workflow callbacks in `src/core/workflow.py`
-- [ ] T285 [S] [US1-6] Write test verifying audit log immutability in `tests/unit/test_audit.py`
+- [X] T280 [S] [US1-6] Create AuditLog service with immutable insert in `src/services/audit.py`
+- [X] T281 [S] [US1-6] Implement SHA-256 checksum for log integrity in `src/services/audit.py`
+- [X] T282 [S] [US1-6] Log agent actions with timestamps, inputs, outputs in `src/services/audit.py`
+- [X] T283 [S] [US1-6] Log all retry cycles with feedback in `src/services/audit.py`
+- [X] T284 [S] [US1-6] Wire audit logging into workflow callbacks in `src/core/workflow.py`
+- [X] T285 [S] [US1-6] Write test verifying audit log immutability in `tests/unit/test_audit.py`
 
 ### 9.2 Data Retention
 
-- [ ] T290 [S] [US1-6] Document 7-year retention policy in code comments in `src/services/storage.py`
-- [ ] T291 [S] [US1-6] Add retention_until column to relevant tables in `src/services/storage.py`
+- [X] T290 [S] [US1-6] Document 7-year retention policy in code comments in `src/services/storage.py`
+- [X] T291 [S] [US1-6] Add retention_until column to relevant tables in `src/services/storage.py`
 
 ---
 

@@ -45,7 +45,34 @@ except ImportError:
     EVENTS_ENABLED = False
     get_event_emitter = None
 
+# Import audit service (optional - graceful degradation if not available)
+try:
+    from src.services.audit import AuditService, create_audit_service
+    from src.services.database import get_db
+    AUDIT_ENABLED = True
+except ImportError:
+    AUDIT_ENABLED = False
+    AuditService = None
+    create_audit_service = None
+    get_db = None
+
 logger = logging.getLogger(__name__)
+
+
+def _get_audit_service():
+    """Get an audit service instance if available.
+
+    Returns:
+        AuditService instance or None if not available.
+    """
+    if not AUDIT_ENABLED or not get_db or not create_audit_service:
+        return None
+    try:
+        db = next(get_db())
+        return create_audit_service(db)
+    except Exception as e:
+        logger.warning(f"Failed to create audit service: {e}")
+        return None
 
 
 # Type alias for agent functions
@@ -94,6 +121,20 @@ def create_agent_node(
             except Exception as e:
                 logger.warning(f"Failed to emit agent_started event: {e}")
 
+        # Log agent_started to audit trail
+        if AUDIT_ENABLED:
+            try:
+                audit = _get_audit_service()
+                if audit:
+                    audit.log_agent_started(
+                        workflow_run_id=workflow_id,
+                        agent_name=agent_name,
+                        retry_count=retry_count,
+                        input_summary={"documents": len(state.get("documents", []))},
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to log agent_started to audit: {e}")
+
         try:
             # Update state to show current agent
             state = WorkflowState(
@@ -120,6 +161,21 @@ def create_agent_node(
                 except Exception as e:
                     logger.warning(f"Failed to emit agent_completed event: {e}")
 
+            # Log agent_completed to audit trail
+            if AUDIT_ENABLED:
+                try:
+                    audit = _get_audit_service()
+                    if audit:
+                        output_summary_dict = _generate_output_summary_dict(agent_name, new_state)
+                        audit.log_agent_completed(
+                            workflow_run_id=workflow_id,
+                            agent_name=agent_name,
+                            duration_ms=duration_ms,
+                            output_summary=output_summary_dict,
+                        )
+                except Exception as e:
+                    logger.warning(f"Failed to log agent_completed to audit: {e}")
+
             # Update current agent to next if specified
             if next_agent:
                 new_state = WorkflowState(
@@ -140,6 +196,20 @@ def create_agent_node(
                     emitter.emit_workflow_failed(str(e), agent_name)
                 except Exception as emit_err:
                     logger.warning(f"Failed to emit workflow_failed event: {emit_err}")
+
+            # Log agent_failed to audit trail
+            if AUDIT_ENABLED:
+                try:
+                    audit = _get_audit_service()
+                    if audit:
+                        audit.log_agent_failed(
+                            workflow_run_id=workflow_id,
+                            agent_name=agent_name,
+                            error=str(e),
+                        )
+                except Exception as audit_err:
+                    logger.warning(f"Failed to log agent_failed to audit: {audit_err}")
+
             return update_workflow_failed(
                 state, f"Agent {agent_name} failed: {str(e)}"
             )
@@ -173,6 +243,45 @@ def _generate_output_summary(agent_name: str, state: WorkflowState) -> str | Non
         non_csm = state.get("non_csm_list", [])
         return f"Output: {len(csm)} CSM, {len(non_csm)} NON_CSM"
     return None
+
+
+def _generate_output_summary_dict(agent_name: str, state: WorkflowState) -> dict[str, Any]:
+    """Generate an output summary dictionary for audit logging.
+
+    Args:
+        agent_name: Name of the agent.
+        state: Current workflow state after agent execution.
+
+    Returns:
+        Dictionary with summary statistics for audit trail.
+    """
+    if agent_name == "extractor":
+        persons = state.get("extracted_persons", [])
+        return {"persons_extracted": len(persons)}
+    elif agent_name == "reconciler":
+        persons = state.get("reconciled_persons", [])
+        groups = state.get("duplicate_groups", [])
+        return {
+            "persons_reconciled": len(persons),
+            "duplicate_groups": len(groups),
+        }
+    elif agent_name == "classifier":
+        persons = state.get("classified_persons", [])
+        csm = sum(1 for p in persons if getattr(p, "classification", "") == "CSM")
+        non_csm = len(persons) - csm
+        return {
+            "persons_classified": len(persons),
+            "csm_count": csm,
+            "non_csm_count": non_csm,
+        }
+    elif agent_name == "formatter":
+        csm = state.get("csm_list", [])
+        non_csm = state.get("non_csm_list", [])
+        return {
+            "csm_count": len(csm),
+            "non_csm_count": len(non_csm),
+        }
+    return {}
 
 
 def _get_phase_retry_count(state: WorkflowState, agent_name: str) -> int:
@@ -233,17 +342,31 @@ def create_critic_node(
                 except Exception as e:
                     logger.warning(f"Failed to emit critic_decision event: {e}")
 
+            # Log critic_decision to audit trail
+            if AUDIT_ENABLED:
+                try:
+                    audit = _get_audit_service()
+                    if audit:
+                        audit.log_critic_decision(
+                            workflow_run_id=workflow_id,
+                            critic_name=critic_name,
+                            decision=decision.value,
+                            feedback=feedback,
+                        )
+                except Exception as e:
+                    logger.warning(f"Failed to log critic_decision to audit: {e}")
+
             # Handle the decision
             if decision == CriticDecision.PASS:
                 return _handle_critic_pass(state, phase)
 
             elif decision == CriticDecision.FAIL_RETRY:
                 if can_retry(state, phase):
+                    agent_name = _get_agent_for_phase(phase)
                     # Emit retry_triggered event
                     if EVENTS_ENABLED and get_event_emitter:
                         try:
                             emitter = get_event_emitter(workflow_id)
-                            agent_name = _get_agent_for_phase(phase)
                             emitter.emit_retry_triggered(
                                 agent_name,
                                 retry_count + 1,
@@ -251,6 +374,22 @@ def create_critic_node(
                             )
                         except Exception as e:
                             logger.warning(f"Failed to emit retry_triggered event: {e}")
+
+                    # Log retry_triggered to audit trail
+                    if AUDIT_ENABLED:
+                        try:
+                            audit = _get_audit_service()
+                            if audit:
+                                audit.log_retry_triggered(
+                                    workflow_run_id=workflow_id,
+                                    agent_name=agent_name,
+                                    retry_count=retry_count + 1,
+                                    reason=feedback or "Retry requested",
+                                    critic_feedback=feedback,
+                                )
+                        except Exception as e:
+                            logger.warning(f"Failed to log retry_triggered to audit: {e}")
+
                     return _handle_critic_retry(
                         state, phase, feedback or "Retry requested"
                     )
@@ -260,24 +399,54 @@ def create_critic_node(
                         f"[{workflow_id}] Max retries reached for {phase}"
                     )
                     error_msg = f"Maximum retries ({MAX_RETRY_COUNT}) exceeded for {phase}"
+                    failed_agent = _get_agent_for_phase(phase)
                     # Emit workflow_failed event
                     if EVENTS_ENABLED and get_event_emitter:
                         try:
                             emitter = get_event_emitter(workflow_id)
-                            emitter.emit_workflow_failed(error_msg, _get_agent_for_phase(phase))
+                            emitter.emit_workflow_failed(error_msg, failed_agent)
                         except Exception as e:
                             logger.warning(f"Failed to emit workflow_failed event: {e}")
+
+                    # Log workflow_failed to audit trail
+                    if AUDIT_ENABLED:
+                        try:
+                            audit = _get_audit_service()
+                            if audit:
+                                audit.log_workflow_failed(
+                                    workflow_run_id=workflow_id,
+                                    error=error_msg,
+                                    failed_agent=failed_agent,
+                                )
+                        except Exception as e:
+                            logger.warning(f"Failed to log workflow_failed to audit: {e}")
+
                     return update_workflow_failed(state, error_msg)
 
             else:  # FAIL_MAX
                 error_msg = f"Critic {critic_name} failed with max retries: {feedback or 'No feedback'}"
+                failed_agent = _get_agent_for_phase(phase)
                 # Emit workflow_failed event
                 if EVENTS_ENABLED and get_event_emitter:
                     try:
                         emitter = get_event_emitter(workflow_id)
-                        emitter.emit_workflow_failed(error_msg, _get_agent_for_phase(phase))
+                        emitter.emit_workflow_failed(error_msg, failed_agent)
                     except Exception as e:
                         logger.warning(f"Failed to emit workflow_failed event: {e}")
+
+                # Log workflow_failed to audit trail
+                if AUDIT_ENABLED:
+                    try:
+                        audit = _get_audit_service()
+                        if audit:
+                            audit.log_workflow_failed(
+                                workflow_run_id=workflow_id,
+                                error=error_msg,
+                                failed_agent=failed_agent,
+                            )
+                    except Exception as e:
+                        logger.warning(f"Failed to log workflow_failed to audit: {e}")
+
                 return update_workflow_failed(state, error_msg)
 
         except Exception as e:
@@ -293,6 +462,20 @@ def create_critic_node(
                     emitter.emit_workflow_failed(error_msg, critic_name)
                 except Exception as emit_err:
                     logger.warning(f"Failed to emit workflow_failed event: {emit_err}")
+
+            # Log workflow_failed to audit trail
+            if AUDIT_ENABLED:
+                try:
+                    audit = _get_audit_service()
+                    if audit:
+                        audit.log_workflow_failed(
+                            workflow_run_id=workflow_id,
+                            error=error_msg,
+                            failed_agent=critic_name,
+                        )
+                except Exception as audit_err:
+                    logger.warning(f"Failed to log workflow_failed to audit: {audit_err}")
+
             return update_workflow_failed(state, error_msg)
 
     return wrapped_critic
@@ -579,6 +762,19 @@ async def run_workflow(
     # Mark workflow as started
     state = update_workflow_started(initial_state)
 
+    # Log workflow_started to audit trail
+    documents = initial_state.get("documents", [])
+    if AUDIT_ENABLED:
+        try:
+            audit = _get_audit_service()
+            if audit:
+                audit.log_workflow_started(
+                    workflow_run_id=workflow_id,
+                    document_count=len(documents),
+                )
+        except Exception as e:
+            logger.warning(f"Failed to log workflow_started to audit: {e}")
+
     try:
         # Run the workflow
         final_state = await compiled_workflow.ainvoke(state)
@@ -600,6 +796,28 @@ async def run_workflow(
             except Exception as e:
                 logger.warning(f"Failed to emit workflow completion event: {e}")
 
+        # Log workflow completion to audit trail
+        if AUDIT_ENABLED:
+            try:
+                audit = _get_audit_service()
+                if audit:
+                    if status == "completed":
+                        summary = _generate_workflow_summary(final_state)
+                        audit.log_workflow_completed(
+                            workflow_run_id=workflow_id,
+                            duration_seconds=duration_seconds,
+                            csm_count=summary.get("csm_count", 0),
+                            non_csm_count=summary.get("non_csm_count", 0),
+                        )
+                    elif status == "failed":
+                        error = final_state.get("failure_reason", "Unknown error")
+                        audit.log_workflow_failed(
+                            workflow_run_id=workflow_id,
+                            error=error,
+                        )
+            except Exception as e:
+                logger.warning(f"Failed to log workflow completion to audit: {e}")
+
         return final_state
 
     except Exception as e:
@@ -612,6 +830,19 @@ async def run_workflow(
                 await emitter.emit_workflow_failed_async(error_msg)
             except Exception as emit_err:
                 logger.warning(f"Failed to emit workflow_failed event: {emit_err}")
+
+        # Log workflow_failed to audit trail
+        if AUDIT_ENABLED:
+            try:
+                audit = _get_audit_service()
+                if audit:
+                    audit.log_workflow_failed(
+                        workflow_run_id=workflow_id,
+                        error=error_msg,
+                    )
+            except Exception as audit_err:
+                logger.warning(f"Failed to log workflow_failed to audit: {audit_err}")
+
         return update_workflow_failed(state, error_msg)
 
 
@@ -635,6 +866,19 @@ def run_workflow_sync(
     # Mark workflow as started
     state = update_workflow_started(initial_state)
 
+    # Log workflow_started to audit trail
+    documents = initial_state.get("documents", [])
+    if AUDIT_ENABLED:
+        try:
+            audit = _get_audit_service()
+            if audit:
+                audit.log_workflow_started(
+                    workflow_run_id=workflow_id,
+                    document_count=len(documents),
+                )
+        except Exception as e:
+            logger.warning(f"Failed to log workflow_started to audit: {e}")
+
     try:
         # Run the workflow
         final_state = compiled_workflow.invoke(state)
@@ -656,6 +900,28 @@ def run_workflow_sync(
             except Exception as e:
                 logger.warning(f"Failed to emit workflow completion event: {e}")
 
+        # Log workflow completion to audit trail
+        if AUDIT_ENABLED:
+            try:
+                audit = _get_audit_service()
+                if audit:
+                    if status == "completed":
+                        summary = _generate_workflow_summary(final_state)
+                        audit.log_workflow_completed(
+                            workflow_run_id=workflow_id,
+                            duration_seconds=duration_seconds,
+                            csm_count=summary.get("csm_count", 0),
+                            non_csm_count=summary.get("non_csm_count", 0),
+                        )
+                    elif status == "failed":
+                        error = final_state.get("failure_reason", "Unknown error")
+                        audit.log_workflow_failed(
+                            workflow_run_id=workflow_id,
+                            error=error,
+                        )
+            except Exception as e:
+                logger.warning(f"Failed to log workflow completion to audit: {e}")
+
         return final_state
 
     except Exception as e:
@@ -668,6 +934,19 @@ def run_workflow_sync(
                 emitter.emit_workflow_failed(error_msg)
             except Exception as emit_err:
                 logger.warning(f"Failed to emit workflow_failed event: {emit_err}")
+
+        # Log workflow_failed to audit trail
+        if AUDIT_ENABLED:
+            try:
+                audit = _get_audit_service()
+                if audit:
+                    audit.log_workflow_failed(
+                        workflow_run_id=workflow_id,
+                        error=error_msg,
+                    )
+            except Exception as audit_err:
+                logger.warning(f"Failed to log workflow_failed to audit: {audit_err}")
+
         return update_workflow_failed(state, error_msg)
 
 
