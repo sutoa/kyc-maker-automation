@@ -10,7 +10,7 @@ import logging
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -143,6 +143,30 @@ app.include_router(
 async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "healthy"}
+
+
+# --- WebSocket Endpoint ---
+
+
+from .websocket import websocket_endpoint
+
+
+@app.websocket("/ws/workflows/{workflow_id}")
+async def websocket_workflow(websocket: WebSocket, workflow_id: str):
+    """WebSocket endpoint for real-time workflow updates.
+
+    Connect to this endpoint to receive real-time updates about workflow progress.
+
+    Events sent:
+    - connected: Connection established
+    - agent_started: Agent begins processing
+    - agent_completed: Agent finished successfully
+    - critic_decision: Critic made a decision
+    - retry_triggered: Agent retry initiated
+    - workflow_completed: Workflow finished successfully
+    - workflow_failed: Workflow failed with error
+    """
+    await websocket_endpoint(websocket, workflow_id)
 
 
 # --- Uvicorn Configuration ---

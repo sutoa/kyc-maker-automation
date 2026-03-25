@@ -274,19 +274,19 @@ LangGraph workflow infrastructure and declarative agent configuration.
 
 ### 8.1 WebSocket Server
 
-- [ ] T260 [S] [US5] Create WebSocket endpoint /ws/workflows/{id} in `src/api/websocket.py`
-- [ ] T261 [S] [US5] Implement connection management (accept, close, broadcast) in `src/api/websocket.py`
-- [ ] T262 [S] [US5] Define WebSocket event types per contracts/api.md in `src/api/websocket.py`
+- [X] T260 [S] [US5] Create WebSocket endpoint /ws/workflows/{id} in `src/api/websocket.py`
+- [X] T261 [S] [US5] Implement connection management (accept, close, broadcast) in `src/api/websocket.py`
+- [X] T262 [S] [US5] Define WebSocket event types per contracts/api.md in `src/api/websocket.py`
 
 ### 8.2 Workflow Event Broadcasting
 
-- [ ] T270 [S] [US5] Create event emitter for agent_started events in `src/core/events.py`
-- [ ] T271 [S] [US5] Create event emitter for agent_completed events in `src/core/events.py`
-- [ ] T272 [S] [US5] Create event emitter for critic_decision events in `src/core/events.py`
-- [ ] T273 [S] [US5] Create event emitter for retry_triggered events in `src/core/events.py`
-- [ ] T274 [S] [US5] Create event emitter for workflow_completed/failed events in `src/core/events.py`
-- [ ] T275 [S] [US5] Wire event emitters into LangGraph workflow callbacks in `src/core/workflow.py`
-- [ ] T276 [S] [US5] Write integration test for WebSocket event flow in `tests/integration/test_websocket.py`
+- [X] T270 [S] [US5] Create event emitter for agent_started events in `src/core/events.py`
+- [X] T271 [S] [US5] Create event emitter for agent_completed events in `src/core/events.py`
+- [X] T272 [S] [US5] Create event emitter for critic_decision events in `src/core/events.py`
+- [X] T273 [S] [US5] Create event emitter for retry_triggered events in `src/core/events.py`
+- [X] T274 [S] [US5] Create event emitter for workflow_completed/failed events in `src/core/events.py`
+- [X] T275 [S] [US5] Wire event emitters into LangGraph workflow callbacks in `src/core/workflow.py`
+- [X] T276 [S] [US5] Write integration test for WebSocket event flow in `tests/integration/test_websocket.py`
 
 ---
 
