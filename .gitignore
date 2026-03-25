@@ -71,6 +71,7 @@ dmypy.json
 # Uploads and output directories
 uploads/
 output/
+outputs/
 
 # Logs
 *.log

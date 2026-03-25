@@ -541,3 +541,40 @@ def load_workflow_output(file_path: str | Path) -> dict[str, Any]:
     """
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def get_uploaded_document(db: Session, document_id: str) -> UploadedDocumentDB | None:
+    """Get an uploaded document by ID."""
+    return (
+        db.query(UploadedDocumentDB)
+        .filter(UploadedDocumentDB.id == document_id)
+        .first()
+    )
+
+
+def get_documents_for_workflow(
+    db: Session, workflow_run_id: str
+) -> list[UploadedDocumentDB]:
+    """Get all documents for a workflow."""
+    return (
+        db.query(UploadedDocumentDB)
+        .filter(UploadedDocumentDB.workflow_run_id == workflow_run_id)
+        .all()
+    )
+
+
+def update_document_status(
+    db: Session,
+    document_id: str,
+    status: DocumentProcessingStatus,
+    error_message: str | None = None,
+) -> UploadedDocumentDB | None:
+    """Update document processing status."""
+    document = get_uploaded_document(db, document_id)
+    if document:
+        document.processing_status = status
+        if error_message:
+            document.error_message = error_message
+        db.commit()
+        db.refresh(document)
+    return document

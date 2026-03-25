@@ -246,27 +246,27 @@ LangGraph workflow infrastructure and declarative agent configuration.
 
 ### 7.1 FastAPI Application Setup
 
-- [ ] T230 [S] [US4-6] Create FastAPI application with CORS and error handlers in `src/api/main.py`
-- [ ] T231 [S] [US4-6] Configure Uvicorn for development and production in `src/api/main.py`
-- [ ] T232 [S] [US4-6] Set up dependency injection for services in `src/api/dependencies.py`
+- [X] T230 [S] [US4-6] Create FastAPI application with CORS and error handlers in `src/api/main.py`
+- [X] T231 [S] [US4-6] Configure Uvicorn for development and production in `src/api/main.py`
+- [X] T232 [S] [US4-6] Set up dependency injection for services in `src/api/dependencies.py`
 
 ### 7.2 Workflow Endpoints (contracts/api.md)
 
-- [ ] T240 [S] [US4] POST /workflows - Upload documents and create workflow in `src/api/routes/workflows.py`
-- [ ] T241 [S] [US4] POST /workflows/{id}/start - Start workflow processing in `src/api/routes/workflows.py`
-- [ ] T242 [S] [US4] GET /workflows/{id} - Get workflow status in `src/api/routes/workflows.py`
-- [ ] T243 [S] [US4] GET /workflows/{id}/output - Download JSON output in `src/api/routes/workflows.py`
-- [ ] T244 [S] [US6] GET /workflows - List workflow history with pagination in `src/api/routes/workflows.py`
-- [ ] T245 [S] [US5] GET /workflows/{id}/trace - Get detailed execution trace in `src/api/routes/workflows.py`
-- [ ] T246 [S] [US4-6] Implement error response format per contracts/api.md in `src/api/errors.py`
-- [ ] T247 [S] [US4-6] Write API integration tests for all endpoints in `tests/integration/test_api.py`
+- [X] T240 [S] [US4] POST /workflows - Upload documents and create workflow in `src/api/routes/workflows.py`
+- [X] T241 [S] [US4] POST /workflows/{id}/start - Start workflow processing in `src/api/routes/workflows.py`
+- [X] T242 [S] [US4] GET /workflows/{id} - Get workflow status in `src/api/routes/workflows.py`
+- [X] T243 [S] [US4] GET /workflows/{id}/output - Download JSON output in `src/api/routes/workflows.py`
+- [X] T244 [S] [US6] GET /workflows - List workflow history with pagination in `src/api/routes/workflows.py`
+- [X] T245 [S] [US5] GET /workflows/{id}/trace - Get detailed execution trace in `src/api/routes/workflows.py`
+- [X] T246 [S] [US4-6] Implement error response format per contracts/api.md in `src/api/errors.py`
+- [X] T247 [S] [US4-6] Write API integration tests for all endpoints in `tests/integration/test_api.py`
 
 ### 7.3 File Upload Handling
 
-- [ ] T250 [S] [US1] Create file upload endpoint with type validation in `src/api/routes/documents.py`
-- [ ] T251 [S] [US1] Store uploaded files to UPLOAD_DIR in `src/api/routes/documents.py`
-- [ ] T252 [S] [US1] Write test for PDF/TXT upload acceptance in `tests/integration/test_upload.py`
-- [ ] T253 [S] [US1] Write test for invalid file type rejection in `tests/integration/test_upload.py`
+- [X] T250 [S] [US1] Create file upload endpoint with type validation in `src/api/routes/documents.py`
+- [X] T251 [S] [US1] Store uploaded files to UPLOAD_DIR in `src/api/routes/documents.py`
+- [X] T252 [S] [US1] Write test for PDF/TXT upload acceptance in `tests/integration/test_upload.py`
+- [X] T253 [S] [US1] Write test for invalid file type rejection in `tests/integration/test_upload.py`
 
 ---
 
