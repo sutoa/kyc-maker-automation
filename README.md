@@ -283,7 +283,7 @@ DATABASE_URL=sqlite:///./kyc_workflows.db
 
 # ── File Handling ─────────────────────────────────────────────
 UPLOAD_DIR=./uploads
-OUTPUT_DIR=./output
+OUTPUT_DIR=./outputs
 MAX_FILE_SIZE_MB=50
 
 # ── Workflow Tuning ───────────────────────────────────────────
@@ -499,3 +499,4 @@ Full feature specifications live in `specs/001-kyc-document-processing/`:
 | `data-model.md` | Full data schema reference |
 | `contracts/` | API and agent I/O contracts |
 | `quickstart.md` | Quick setup guide |
+| `research.md` | Background research and design decisions |

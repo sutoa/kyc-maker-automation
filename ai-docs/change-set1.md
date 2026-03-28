@@ -1,0 +1,2 @@
+### change request
+I would to adjust the workflow.yaml and agents.yaml to use the structure as proposed in the examples in the ai-docs/examples folder. Please make sure that you follow those examples strictly as they are, and ask me if you have any questions before you proceed.

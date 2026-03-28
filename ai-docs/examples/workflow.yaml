@@ -2,25 +2,28 @@
 # AGENTFLOW YAML SPECIFICATION v1.2
 #
 # Agents are defined in agents.yaml and referenced here by key.
-# This file owns: workflow metadata, state schema, nodes,
-# edges, observability, runtime, and variables.
+# This file owns: workflow metadata, tools, state schema,
+# nodes, edges, observability, runtime, and variables.
 # ============================================================
 
 version: "1.2"
 
 workflow:
-  id: kyc_document_processing
-  name: "KYC Document Processing"
-  description: "Multi-agent workflow for extracting, reconciling, and classifying persons from KYC documents with critic validation at each stage."
-  entry_point: __start__
-  max_steps: 30
-  timeout_seconds: 600
+  id: research_and_report
+  name: "Research & Report Pipeline"
+  description: "Multi-agent workflow that researches a topic, critiques the output, and produces a polished report."
+  entry_point: __start__            # built-in sentinel — no node definition needed
+  max_steps: 50
+  timeout_seconds: 300
 
 
 # ──────────────────────────────────────────────────────────────
 # AGENTS IMPORT
 # Points to the shared agent library. All agent keys defined
 # in that file are available to nodes in this workflow.
+# An inline agents: block here would override this import
+# for any keys that collide — useful for workflow-specific
+# overrides without editing the shared library.
 # ──────────────────────────────────────────────────────────────
 agents_ref: ./agents.yaml
 
@@ -31,38 +34,52 @@ agents_ref: ./agents.yaml
 # than defaults defined inside agents.yaml.
 # ──────────────────────────────────────────────────────────────
 defaults:
-  model: openai/gpt-4o-mini
-  temperature: 0
-  max_tokens: 16384
+  model: openai/gpt-4o
+  temperature: 0.3
+  max_tokens: 2048
   retry:
-    max_attempts: 4
+    max_attempts: 3
     backoff: exponential          # linear | exponential | fixed
-    delay_seconds: 1
+    delay_seconds: 2
+
+
+# ──────────────────────────────────────────────────────────────
+# TOOLS REGISTRY
+# ──────────────────────────────────────────────────────────────
+tools:
+  web_search:
+    type: builtin                 # builtin | mcp | function | langchain
+    name: web_search
+
+  sql_query:
+    type: function
+    ref: my_package.tools.run_sql
+
+  github_tool:
+    type: mcp
+    server_url: https://mcp.github.com/sse
+    name: github
+
+  summarizer:
+    type: langchain
+    class: langchain_community.tools.WikipediaQueryRun
+    args:
+      top_k_results: 3
 
 
 # ──────────────────────────────────────────────────────────────
 # STATE SCHEMA
 # ──────────────────────────────────────────────────────────────
 state:
-  workflow_id:                { type: string }
-  documents:                  { type: object,  default: [] }
-  extracted_persons:          { type: object,  default: [] }
-  extraction_retry_count:     { type: integer, default: 0 }
-  extraction_feedback:        { type: string,  default: null }
-  reconciled_persons:         { type: object,  default: [] }
-  duplicate_groups:           { type: object,  default: [] }
-  reconciliation_retry_count: { type: integer, default: 0 }
-  reconciliation_feedback:    { type: string,  default: null }
-  classified_persons:         { type: object,  default: [] }
-  classification_retry_count: { type: integer, default: 0 }
-  classification_feedback:    { type: string,  default: null }
-  last_critic_feedback:       { type: object,  default: null }
-  document_manifest:          { type: object,  default: [] }
-  csm_list:                   { type: object,  default: [] }
-  non_csm_list:               { type: object,  default: [] }
-  current_agent:              { type: string,  default: "extractor" }
-  status:                     { type: string,  default: "pending" }
-  failure_reason:             { type: string,  default: null }
+  topic:              { type: string }
+  research:           { type: string,  default: "" }
+  critique:           { type: string,  default: "" }
+  report:             { type: string,  default: "" }
+  approved:           { type: boolean, default: false }
+  loop_count:         { type: integer, default: 0 }
+  fact_check_result:  { type: object,  default: {} }
+  sentiment_result:   { type: object,  default: {} }
+  human_feedback:     { type: string,  default: "" }
 
 
 # ──────────────────────────────────────────────────────────────
@@ -71,36 +88,58 @@ state:
 # Valid types: agent | parallel | merger | human | subgraph | end
 #
 # __start__ is a built-in sentinel — no node definition needed.
+# agent: references a key from agents.yaml (via agents_ref)
+#        or from an inline agents: block in this file.
 # ──────────────────────────────────────────────────────────────
 nodes:
 
-  extractor:
+  researcher:
     type: agent
-    agent: extractor
+    agent: researcher
 
-  critic_1:
-    type: agent
-    agent: critic_1
+  parallel_checks:
+    type: parallel
+    branches:
+      - fact_checker_node
+      - sentiment_node
+    merge_strategy: merge_all         # merge_all | first | reduce
 
-  reconciler:
+  fact_checker_node:
     type: agent
-    agent: reconciler
+    agent: fact_checker
 
-  critic_2:
+  sentiment_node:
     type: agent
-    agent: critic_2
+    agent: sentiment_analyzer
 
-  classifier:
-    type: agent
-    agent: classifier
+  merge_checks:
+    type: merger
+    inputs: [fact_checker_node, sentiment_node]
+    merge_fn: my_package.mergers.combine_checks
 
-  critic_3:
+  critic:
     type: agent
-    agent: critic_3
+    agent: critic
 
-  formatter:
+  writer:
     type: agent
-    agent: formatter
+    agent: writer
+
+  human_review:
+    type: human
+    prompt: "Please review the report and approve or request changes."
+    timeout_seconds: 3600
+    on_timeout: end
+    input_keys: [report]
+    output_key: human_feedback
+
+  deep_research_branch:
+    type: subgraph
+    workflow_ref: ./deep_research_workflow.yaml
+    input_mapping:
+      topic: topic
+    output_mapping:
+      deep_result: research
 
   end:
     type: end
@@ -114,7 +153,8 @@ nodes:
 # Conditional edges: fn: + routes:
 #   fn:      fully-qualified Python callable — fn(state: dict) -> str
 #   routes:  maps return value strings to destination node names
-#   default: reserved key — warn-and-continue fallback
+#   default: reserved key — warn-and-continue fallback for any
+#            return value not present in routes
 #
 # on_traverse: optional side-effects applied when this edge fires
 #   when_route:    only apply side-effects when fn returns this value
@@ -122,63 +162,49 @@ nodes:
 # ──────────────────────────────────────────────────────────────
 edges:
 
-  # ── Entry ──────────────────────────────────────────────────
+  # ── Entry: route by topic complexity ───────────────────────
+  # __start__ fires immediately when the workflow is invoked.
+  # fn returns: "deep" | "simple"
   - from: __start__
-    to: extractor
-
-  # ── Extraction phase ───────────────────────────────────────
-  - from: extractor
-    to: critic_1
-
-  # fn returns: "pass" | "fail_retry" | "fail_max"
-  - from: critic_1
     condition:
-      fn: src.core.conditions.route_critic_1
+      fn: my_package.conditions.route_by_complexity
       routes:
-        pass:       reconciler
-        fail_retry: extractor
-        fail_max:   end
-        default:    end
-    on_traverse:
-      when_route: fail_retry
-      increment_key: extraction_retry_count
+        deep:    deep_research_branch
+        simple:  researcher
+        default: researcher            # warn + fallback if unexpected value
 
-  # ── Reconciliation phase ───────────────────────────────────
-  - from: reconciler
-    to: critic_2
+  # ── Deep research rejoins main flow ────────────────────────
+  - from: deep_research_branch
+    to: researcher
 
-  # fn returns: "pass" | "fail_retry" | "fail_max"
-  - from: critic_2
+  # ── Linear flow through parallel quality checks ────────────
+  - from: researcher
+    to: parallel_checks
+
+  - from: parallel_checks
+    to: merge_checks
+
+  - from: merge_checks
+    to: critic
+
+  # ── Feedback loop: exit or loop back ───────────────────────
+  # fn returns: "true" (quality met) | "false" (loop back)
+  - from: critic
     condition:
-      fn: src.core.conditions.route_critic_2
+      fn: my_package.conditions.should_exit
       routes:
-        pass:       classifier
-        fail_retry: reconciler
-        fail_max:   end
-        default:    end
+        "true":  writer
+        "false": researcher
+        default: researcher            # warn + fallback
     on_traverse:
-      when_route: fail_retry
-      increment_key: reconciliation_retry_count
+      when_route: "false"             # only increment when looping back
+      increment_key: loop_count
 
-  # ── Classification phase ───────────────────────────────────
-  - from: classifier
-    to: critic_3
+  # ── Final review and completion ────────────────────────────
+  - from: writer
+    to: human_review
 
-  # fn returns: "pass" | "fail_retry" | "fail_max"
-  - from: critic_3
-    condition:
-      fn: src.core.conditions.route_critic_3
-      routes:
-        pass:       formatter
-        fail_retry: classifier
-        fail_max:   end
-        default:    end
-    on_traverse:
-      when_route: fail_retry
-      increment_key: classification_retry_count
-
-  # ── Output ─────────────────────────────────────────────────
-  - from: formatter
+  - from: human_review
     to: end
 
 
@@ -187,8 +213,8 @@ edges:
 # ──────────────────────────────────────────────────────────────
 observability:
   provider: langsmith               # langsmith | langfuse | none
-  project: kyc_document_processing
-  tags: [production, kyc]
+  project: my_research_project
+  tags: [production, research]
   trace_state: true
   trace_inputs: true
   trace_outputs: true
@@ -200,8 +226,8 @@ observability:
 runtime:
   framework: langgraph
   checkpointer: sqlite              # sqlite | postgres | memory | redis
-  checkpointer_uri: "sqlite:///./kyc_workflows.db"
-  interrupt_before: []
+  checkpointer_uri: "sqlite:///./checkpoints.db"
+  interrupt_before: [human_review]
   interrupt_after: []
 
 
@@ -209,5 +235,5 @@ runtime:
 # VARIABLES
 # ──────────────────────────────────────────────────────────────
 vars:
-  upload_dir: "${UPLOAD_DIR}"
-  max_file_size_mb: "${MAX_FILE_SIZE_MB}"
+  topic: "${INPUT_TOPIC}"
+  current_year: "${CURRENT_YEAR}"

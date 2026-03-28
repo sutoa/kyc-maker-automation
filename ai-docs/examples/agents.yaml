@@ -1,0 +1,231 @@
+# ============================================================
+# AGENTS LIBRARY — agents.yaml
+#
+# A reusable catalogue of agent definitions, decoupled from
+# any specific workflow. Reference individual agents from any
+# workflow.yaml using:
+#
+#   agents_ref: ./agents.yaml
+#
+# and then refer to agents by their key name in nodes:
+#
+#   nodes:
+#     researcher_node:
+#       type: agent
+#       agent: researcher        ← matches the key below
+#
+# Agents defined here carry no knowledge of graph topology —
+# no edges, no routing, no workflow-specific wiring.
+# ============================================================
+
+version: "1.2"
+
+
+# ──────────────────────────────────────────────────────────────
+# DEFAULTS
+# Agent-level defaults. Any field here is inherited by all
+# agents unless explicitly overridden on the agent itself.
+# Workflow-level defaults take lower precedence than these.
+# ──────────────────────────────────────────────────────────────
+defaults:
+  model: openai/gpt-4o
+  temperature: 0.3
+  max_tokens: 2048
+  retry:
+    max_attempts: 3
+    backoff: exponential          # linear | exponential | fixed
+    delay_seconds: 2
+
+
+# ──────────────────────────────────────────────────────────────
+# AGENTS
+#
+# Each agent key is the identifier used in workflow nodes.
+#
+# Fields:
+#   role        — professional identity injected into system prompt
+#   goal        — primary objective; supports {var} interpolation
+#   backstory   — background context that shapes agent behaviour
+#   model       — LiteLLM model string: provider/model-name
+#   temperature — 0.0–1.0; overrides defaults.temperature
+#   max_tokens  — max response tokens; overrides defaults.max_tokens
+#   tools       — list of tool keys from the tools registry
+#   input_keys  — state keys this agent reads as context
+#   output_key  — state key this agent writes its result to
+#
+#   system_prompt — two modes (mutually exclusive):
+#     inline: "..."        embed the prompt directly in this file
+#     file: ./path/to.md   load from an external file at runtime
+#                          supports the same {var} interpolation
+#
+#   output_schema — three modes (mutually exclusive):
+#     ref: my_pkg.ClassName    Pydantic class; strict structured output
+#                              via LangGraph's .with_structured_output()
+#     example: {...}           sample JSON object; loader infers schema
+#                              and injects it as {output_example} in prompt
+#     (omitted)                no structured output; handle in prompt
+# ──────────────────────────────────────────────────────────────
+agents:
+
+  # ── researcher ─────────────────────────────────────────────
+  researcher:
+    role: "Senior Research Analyst"
+    goal: "Produce thorough, factual research on {topic}"
+    backstory: |
+      You are an expert researcher with 15 years of experience
+      synthesizing information from diverse, authoritative sources.
+      You prioritise primary sources, flag uncertainty honestly,
+      and never speculate beyond the available evidence.
+    model: anthropic/claude-sonnet-4-20250514
+    temperature: 0.2
+    tools:
+      - web_search
+      - summarizer
+    input_keys: [topic]
+    output_key: research
+    output_schema:
+      example:
+        summary: "A concise overview of the topic."
+        key_findings:
+          - "First major finding with source."
+          - "Second major finding with source."
+        sources:
+          - url: "https://example.com"
+            title: "Example Source"
+            credibility: high          # high | medium | low
+        confidence_score: 0.85
+    system_prompt:
+      file: ./prompts/researcher.md    # uses {topic} and {output_example}
+
+  # ── critic ─────────────────────────────────────────────────
+  critic:
+    role: "Quality Critic"
+    goal: "Identify gaps and weaknesses in research on {topic}"
+    backstory: |
+      You are a rigorous academic editor with a background in
+      investigative journalism. You assess research for factual
+      accuracy, source quality, logical coherence, and bias.
+      You are constructive but unsparing — your approval means
+      the work is genuinely publication-ready.
+    model: openai/gpt-4o
+    temperature: 0.1                   # low temp for consistent evaluation
+    input_keys: [topic, research]
+    output_key: critique
+    output_schema:
+      ref: my_package.schemas.CritiqueResult
+    system_prompt:
+      inline: |
+        Review the following research on {topic} and assess its quality.
+
+        Research:
+        ---
+        {research}
+        ---
+
+        Evaluate on these dimensions:
+          - Factual accuracy: are all claims verifiable and correctly stated?
+          - Source quality: are sources credible, recent, and diverse?
+          - Logical coherence: is the argument well-structured and consistent?
+          - Bias and framing: is the research balanced and objective?
+          - Coverage gaps: what important aspects are missing?
+
+        Set approved = true only if the research meets publication quality
+        on all dimensions above.
+
+        Return your assessment in this exact format:
+        {output_example}
+
+  # ── writer ─────────────────────────────────────────────────
+  writer:
+    role: "Technical Writer"
+    goal: "Produce a polished, well-structured report on {topic}"
+    backstory: |
+      You are a technical writer specialising in long-form reports
+      for senior stakeholders. You are known for making complex
+      topics accessible without sacrificing precision. You always
+      address critique head-on rather than ignoring it.
+    model: openai/gpt-4o
+    temperature: 0.4                   # slightly higher for fluent prose
+    tools:
+      - web_search
+    input_keys: [topic, research, critique]
+    output_key: report
+    output_schema:
+      ref: my_package.schemas.ReportResult
+    system_prompt:
+      file: ./prompts/writer.md        # uses {topic}, {research}, {critique}, {output_example}
+
+  # ── fact_checker ───────────────────────────────────────────
+  fact_checker:
+    role: "Fact Checker"
+    goal: "Verify the factual accuracy of research claims"
+    backstory: |
+      You are a professional fact checker with experience at major
+      news organisations. You verify claims against known facts,
+      flag anything unverifiable, and never invent sources.
+    model: openai/gpt-4o-mini          # fast and cheap for verification
+    temperature: 0.0                   # fully deterministic
+    input_keys: [research]
+    output_key: fact_check_result
+    output_schema:
+      example:
+        verified_claims:
+          - "Claim 1 is accurate as stated."
+        unverified_claims:
+          - "Claim 2 could not be independently verified."
+        inaccurate_claims:
+          - "Claim 3 is factually incorrect: the correct figure is X."
+        overall_accuracy: 0.75         # 0.0–1.0
+    system_prompt:
+      inline: |
+        You are a fact checker. Review the research below and evaluate
+        each factual claim — things stated as fact, not opinion.
+
+        Research:
+        {research}
+
+        For each claim, classify it as:
+          - verified: you are confident it is accurate
+          - unverified: you cannot confirm or deny it
+          - inaccurate: you know it to be wrong (explain why)
+
+        Return your findings in this exact format:
+        {output_example}
+
+  # ── sentiment_analyzer ─────────────────────────────────────
+  sentiment_analyzer:
+    role: "Sentiment and Bias Analyst"
+    goal: "Assess the tone and framing of research for bias"
+    backstory: |
+      You are a media analyst trained to detect framing effects,
+      loaded language, and structural bias in written content.
+      You assess tone objectively and do not inject your own
+      political or ideological views.
+    model: openai/gpt-4o-mini
+    temperature: 0.0
+    input_keys: [research]
+    output_key: sentiment_result
+    output_schema:
+      example:
+        overall_tone: "neutral"        # positive | neutral | negative
+        bias_detected: false
+        bias_type: null                # political | commercial | cultural | null
+        framing_notes: "The research presents a balanced view with no loaded language."
+        confidence: 0.90
+    system_prompt:
+      inline: |
+        Assess the tone and framing of the following research.
+
+        Research:
+        {research}
+
+        Evaluate for:
+          - Overall emotional tone (positive / neutral / negative)
+          - Detectable bias: political, commercial, or cultural slant
+          - Use of loaded language, weasel words, or one-sided framing
+          - Whether multiple perspectives are fairly represented
+
+        Return your assessment in this exact format:
+        {output_example}
+
+
