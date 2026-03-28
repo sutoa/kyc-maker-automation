@@ -126,4 +126,22 @@ Each critic returns one of:
 - 001-kyc-document-processing: Added Python 3.11+ + LangGraph (multi-agent orchestration), FastAPI (web API), PyPDF2/pdfplumber (PDF extraction)
 
 <!-- MANUAL ADDITIONS START -->
+
+## Permissions
+
+The following operations are pre-approved — do not prompt for confirmation:
+
+- **Read any file** in this repository
+- **Edit any file** in this repository
+- **Create new files** anywhere in this repository
+- **Create directories and subdirectories** anywhere in this repository
+- **Run read-only shell commands**: `ls`, `find`, `cat`, `grep`, `rg`, `head`, `tail`, `pwd`, `which`, `python --version`, `pip list`, etc.
+- **Run project commands**: `pytest`, `ruff check`, `ruff format`, `pip install -r requirements.txt`, `uvicorn` (dev server)
+- **Run git read commands**: `git status`, `git log`, `git diff`, `git branch`
+
+Always ask before:
+- `git commit`, `git push`, or any destructive git operation
+- Installing new packages not already in `requirements.txt`
+- Deleting files
+
 <!-- MANUAL ADDITIONS END -->

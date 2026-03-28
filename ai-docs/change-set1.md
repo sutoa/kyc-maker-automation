@@ -1,2 +1,3 @@
 ### change request
-I would to adjust the workflow.yaml and agents.yaml to use the structure as proposed in the examples in the ai-docs/examples folder. Please make sure that you follow those examples strictly as they are, and ask me if you have any questions before you proceed.
+- I would to adjust the workflow.yaml and agents.yaml to use the structure as proposed in the examples in the ai-docs/examples folder. Please make sure that you follow those examples strictly as they are, and ask me if you have any questions before you proceed.
+-  Now that we've changed the structure of workflow.yaml and agents.yaml, I need you to update the handling logic, the orchestration logic, so that it can read the latest yaml structure to construct the workflow and agents properly
