@@ -72,46 +72,25 @@ def render_prompt(
     Returns:
         Rendered prompt ready for LLM.
     """
+    import json
+
     template = load_prompt_template()
 
-    # Build documents section
-    docs_section = []
-    for doc in documents:
-        docs_section.append(
-            f"### Document: {doc.filename} (ID: {doc.document_id})\n"
-            f"Type: {doc.file_type} | Pages: {doc.page_count}\n\n"
-            f"{doc.content}\n\n---"
-        )
+    # Build documents list for JSON substitution
+    docs_list = [
+        {
+            "document_id": doc.document_id,
+            "filename": doc.filename,
+            "file_type": doc.file_type,
+            "page_count": doc.page_count,
+            "content": doc.content,
+        }
+        for doc in documents
+    ]
 
-    # Replace template variables
-    # Simple template replacement (not using full Handlebars)
-    prompt = template
-
-    # Handle retry feedback conditional
-    if retry_feedback:
-        feedback_section = (
-            f"## Retry Feedback\n\n"
-            f"Previous extraction had issues. Please address the following feedback:\n\n"
-            f"{retry_feedback}\n\n"
-            f"Pay special attention to the issues mentioned and ensure they are corrected in this extraction.\n"
-        )
-        # Insert before documents section
-        prompt = prompt.replace(
-            "## Documents to Process",
-            f"{feedback_section}\n## Documents to Process",
-        )
-    else:
-        # Remove the retry feedback template section
-        prompt = prompt.replace("{{#if retry_feedback}}", "")
-        prompt = prompt.replace("{{/if}}", "")
-        prompt = prompt.replace("{{{retry_feedback}}}", "")
-
-    # Replace documents placeholder
-    prompt = prompt.replace(
-        "{{#each documents}}\n### Document: {{filename}} (ID: {{document_id}})\n"
-        "Type: {{file_type}} | Pages: {{page_count}}\n\n{{{content}}}\n\n---\n{{/each}}",
-        "\n".join(docs_section),
-    )
+    # Substitute {{documents}} and {{extraction_feedback}} placeholders
+    prompt = template.replace("{{documents}}", json.dumps(docs_list, ensure_ascii=False, indent=2))
+    prompt = prompt.replace("{{extraction_feedback}}", retry_feedback or "")
 
     return prompt
 

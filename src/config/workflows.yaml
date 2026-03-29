@@ -26,21 +26,6 @@ agents_ref: ./agents.yaml
 
 
 # ──────────────────────────────────────────────────────────────
-# GLOBAL DEFAULTS
-# These apply to this workflow only and are lower precedence
-# than defaults defined inside agents.yaml.
-# ──────────────────────────────────────────────────────────────
-defaults:
-  model: openai/gpt-4o-mini
-  temperature: 0
-  max_tokens: 16384
-  retry:
-    max_attempts: 4
-    backoff: exponential          # linear | exponential | fixed
-    delay_seconds: 1
-
-
-# ──────────────────────────────────────────────────────────────
 # STATE SCHEMA
 # ──────────────────────────────────────────────────────────────
 state:
@@ -133,7 +118,7 @@ edges:
   # fn returns: "pass" | "fail_retry" | "fail_max"
   - from: critic_1
     condition:
-      fn: src.core.conditions.route_critic_1
+      fn: src.core.conditions.route_on_critic_decision
       routes:
         pass:       reconciler
         fail_retry: extractor
@@ -150,7 +135,7 @@ edges:
   # fn returns: "pass" | "fail_retry" | "fail_max"
   - from: critic_2
     condition:
-      fn: src.core.conditions.route_critic_2
+      fn: src.core.conditions.route_on_critic_decision
       routes:
         pass:       classifier
         fail_retry: reconciler
@@ -167,7 +152,7 @@ edges:
   # fn returns: "pass" | "fail_retry" | "fail_max"
   - from: critic_3
     condition:
-      fn: src.core.conditions.route_critic_3
+      fn: src.core.conditions.route_on_critic_decision
       routes:
         pass:       formatter
         fail_retry: classifier

@@ -76,20 +76,19 @@ class TestGetLLMProvider:
     def test_invalid_provider(self):
         """Test that invalid provider raises ValueError."""
         with pytest.raises(ValueError, match="Unsupported LLM provider"):
-            get_llm_provider(provider="invalid")
+            get_llm_provider("invalid/model")
 
     @patch.dict(os.environ, {"LLM_PROVIDER": "openai", "OPENAI_API_KEY": "test-key"})
     def test_default_provider_from_env(self):
-        """Test that default provider comes from LLM_PROVIDER env var."""
-        provider = get_llm_provider()
+        """Test that provider is resolved from LLM_PROVIDER env var when no prefix given."""
+        provider = get_llm_provider("gpt-4o")
         assert provider.provider_name == "openai"
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
     def test_default_to_openai(self):
         """Test that OpenAI is the default when no env var set."""
-        # Clear LLM_PROVIDER if set
         os.environ.pop("LLM_PROVIDER", None)
-        provider = get_llm_provider()
+        provider = get_llm_provider("gpt-4o")
         assert provider.provider_name == "openai"
 
 
@@ -144,7 +143,7 @@ class TestOpenAIProvider:
         messages = [
             Message(role=MessageRole.USER, content="Hello"),
         ]
-        response = await provider.complete(messages)
+        response = await provider.complete(messages, temperature=0, max_tokens=100)
 
         assert response.content == "Hello, I'm an AI assistant."
         assert response.model == "gpt-4o"

@@ -71,8 +71,8 @@ class LLMProvider(ABC):
     async def complete(
         self,
         messages: list[Message],
-        temperature: float = 0.7,
-        max_tokens: int | None = None,
+        temperature: float,
+        max_tokens: int,
         **kwargs: Any,
     ) -> LLMResponse:
         """Generate a completion for the given messages.

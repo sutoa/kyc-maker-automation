@@ -1,6 +1,6 @@
 # kyc-maker-automation Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-24
+Auto-generated from all feature plans. Last updated: 2026-03-29
 
 ## Active Technologies
 
@@ -16,6 +16,8 @@ src/
 ├── config/           # YAML-based agent and workflow configuration
 │   └── schemas/      # JSON schemas for config validation
 ├── core/             # Workflow engine, state management, event emission
+│   ├── agent_factory.py  # YAML-driven agent function builder (llm + rule execution)
+│   ├── conditions.py     # Generic critic routing (route_on_critic_decision)
 │   └── llm/          # LLM provider abstraction (OpenAI, Gemini)
 ├── models/           # Pydantic data models
 ├── prompts/          # Agent prompt templates (markdown)
@@ -91,19 +93,25 @@ SQL_ECHO=false               # Set to 'true' for SQL query logging
 
 ### Multi-Agent Workflow
 The system uses LangGraph for orchestrating a multi-agent workflow:
-- **Extractor**: Extracts person data from documents (LLM-powered)
-- **Critic 1**: Validates extraction quality
-- **Reconciler**: Deduplicates persons using fuzzy matching
-- **Critic 2**: Validates reconciliation
-- **Classifier**: Classifies persons as CSM/NON_CSM (LLM-powered)
-- **Critic 3**: Validates classification reasoning
-- **Formatter**: Produces final JSON output
+- **Extractor** (`execution: llm`): Extracts person data from documents
+- **Critic 1** (`execution: llm`): Validates extraction quality
+- **Reconciler** (`execution: llm`): Deduplicates persons using fuzzy matching
+- **Critic 2** (`execution: rule`): Validates reconciliation via `validate_reconciliation_for_factory`
+- **Classifier** (`execution: llm`): Classifies persons as CSM/NON_CSM
+- **Critic 3** (`execution: rule`): Validates classification via `validate_classification_for_factory`
+- **Formatter** (`execution: llm`): Produces final JSON output
+
+### Agent Factory Pattern
+`src/core/agent_factory.py` is the **only** place that builds agent callables. It reads `agents.yaml` and constructs a `(state: WorkflowState) -> WorkflowState` closure for each agent:
+- `execution: llm` → loads prompt, builds system message from role/goal/backstory, calls LLM, parses output via `output_schema.ref`
+- `execution: rule` → resolves `rule_fn` dotted path and calls it directly
+- Both types increment `retry_count_key` on `FAIL_RETRY` and enforce `retry.max_attempts`
 
 ### Critic Pattern (3-Outcome)
-Each critic returns one of:
-- `PASS`: Move to next agent
-- `FAIL_RETRY`: Retry with feedback (up to 4 times)
-- `FAIL_MAX`: Stop workflow with error
+Each critic writes a `CriticFeedback` to `last_critic_feedback` in state. The single routing function `src.core.conditions.route_on_critic_decision` reads this and returns:
+- `"pass"` → advance to next agent
+- `"fail_retry"` → retry with feedback (up to `retry.max_attempts` times)
+- `"fail_max"` → halt workflow with error
 
 ### State Management
 - `WorkflowState` TypedDict flows through all agents
@@ -123,6 +131,7 @@ Each critic returns one of:
 
 ## Recent Changes
 
+- 001-kyc-document-processing: Implemented YAML-driven agent factory (`src/core/agent_factory.py`). All agent config (model, temperature, max_tokens, retry, prompts, output schemas) now read exclusively from `agents.yaml` at runtime. Rule-based critics (`critic_2`, `critic_3`) declared with `execution: rule` + `rule_fn`. Single generic routing function `route_on_critic_decision` replaces per-critic routing functions. `compile_workflow()` builds the full graph from YAML with no external function dicts required.
 - 001-kyc-document-processing: Added Python 3.11+ + LangGraph (multi-agent orchestration), FastAPI (web API), PyPDF2/pdfplumber (PDF extraction)
 
 <!-- MANUAL ADDITIONS START -->

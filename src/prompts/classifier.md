@@ -8,9 +8,24 @@ Classify each reconciled person as either:
 - **CSM** (Controlling Senior Manager): A person with significant control or management authority
 - **NON_CSM**: A person without CSM-level control or authority
 
-## CSM Definition
+## CSM Definition and Criteria
 
-{{{csm_definition}}}
+A person qualifies as a Controlling Senior Manager (CSM) if they meet **at least one** of the following criteria:
+
+**Criterion 1 — Executive Management Role**
+The person holds a senior management or executive position with decision-making authority over the organization's business operations (e.g., Geschäftsführer/Managing Director, Vorstand/Executive Board Member, CEO, CFO, COO, or equivalent).
+
+**Criterion 2 — Significant Ownership**
+The person directly or indirectly owns or controls 25% or more of the shares, voting rights, or equity interests in the entity.
+
+**Criterion 3 — Signing / Representation Authority**
+The person has been granted sole or joint authority to legally represent the entity and enter into binding commitments on its behalf (e.g., Einzelprokura, Gesamtprokura with effective control, Bevollmächtigter with broad authority).
+
+**Criterion 4 — Supervisory Control**
+The person holds a position with supervisory authority over the management of the entity (e.g., Aufsichtsrat/Supervisory Board Member, Beirat/Advisory Board with veto rights).
+
+**Criterion 5 — Effective Control**
+The person exercises effective control over the entity through any other means (e.g., contractual arrangements, voting agreements, shareholder agreements granting veto rights).
 
 ## Classification Requirements
 
@@ -80,18 +95,12 @@ For each classified person:
 
 ## Retry Feedback
 
-{{#if retry_feedback}}
-Previous classification had issues. Please address the following feedback:
-
-{{{retry_feedback}}}
-
-Pay special attention to strengthening your reasoning and citing specific criteria.
-{{/if}}
+{{classification_feedback}}
 
 ## Reconciled Persons to Classify
 
 ```json
-{{reconciled_persons_json}}
+{{reconciled_persons}}
 ```
 
 ## Your Response

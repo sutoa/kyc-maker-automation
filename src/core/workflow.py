@@ -1,45 +1,34 @@
 """LangGraph workflow engine for KYC document processing.
 
 This module defines:
-- Base agent node wrapper with logging and state updates
-- Critic node wrapper with 3-outcome routing
-- Conditional edge functions for workflow transitions
-- The complete StateGraph with all agents
-- Event emission for real-time WebSocket updates
+- Generic agent node wrapper with logging, events, and audit trail
+- YAML-driven StateGraph builder (nodes + edges from workflows.yaml)
+- Workflow compilation with checkpointer, observability, and runtime config
+- Workflow execution helpers (async and sync)
 
-Workflow Flow:
-extractor -> critic_1 -> reconciler -> critic_2 -> classifier -> critic_3 -> formatter
-            |                |                      |
-            v (retry)        v (retry)              v (retry)
-          extractor        reconciler            classifier
+All graph topology, agent configuration, and runtime settings are read
+from workflows.yaml and agents.yaml. No hardcoded agent names, phases,
+retry counts, or model names.
 """
 
 import logging
+import os
 from datetime import datetime
-from typing import Any, Callable, Literal
+from typing import Any, Callable
 
 from langgraph.graph import END, StateGraph
 
 from src.config.loader import (
+    build_agent_functions,
+    load_agents_config,
     load_workflows_config,
     resolve_callable,
 )
 from src.core.state import (
-    MAX_RETRY_COUNT,
     WorkflowState,
-    can_retry,
-    get_retry_count,
-    update_classification_passed,
-    update_classification_retry,
-    update_extraction_passed,
-    update_extraction_retry,
-    update_reconciliation_passed,
-    update_reconciliation_retry,
     update_workflow_failed,
     update_workflow_started,
 )
-from src.models.enums import CriticDecision
-
 # Import event emitter (optional - graceful degradation if not available)
 try:
     from src.core.events import get_event_emitter
@@ -109,7 +98,7 @@ def create_agent_node(
 
     def wrapped_agent(state: WorkflowState) -> WorkflowState:
         workflow_id = state.get("workflow_id", "unknown")
-        retry_count = _get_phase_retry_count(state, agent_name)
+        retry_count = state.get("extraction_retry_count") or state.get("reconciliation_retry_count") or state.get("classification_retry_count") or 0
 
         logger.info(
             f"[{workflow_id}] Starting agent: {agent_name} (retry: {retry_count})"
@@ -221,366 +210,62 @@ def create_agent_node(
 
 
 def _generate_output_summary(agent_name: str, state: WorkflowState) -> str | None:
-    """Generate a brief output summary for an agent.
-
-    Args:
-        agent_name: Name of the agent.
-        state: Current workflow state after agent execution.
-
-    Returns:
-        Brief summary string or None.
-    """
-    if agent_name == "extractor":
-        persons = state.get("extracted_persons", [])
-        return f"Extracted {len(persons)} person(s)"
-    elif agent_name == "reconciler":
-        persons = state.get("reconciled_persons", [])
-        groups = state.get("duplicate_groups", [])
-        return f"Reconciled to {len(persons)} person(s), {len(groups)} duplicate group(s)"
-    elif agent_name == "classifier":
-        persons = state.get("classified_persons", [])
-        csm = sum(1 for p in persons if getattr(p, "classification", "") == "CSM")
-        return f"Classified {len(persons)} person(s): {csm} CSM"
-    elif agent_name == "formatter":
-        csm = state.get("csm_list", [])
-        non_csm = state.get("non_csm_list", [])
+    """Generate a brief output summary for event emission."""
+    output_key_counts = {
+        "extracted_persons": lambda s: f"Extracted {len(s.get('extracted_persons', []))} person(s)",
+        "reconciled_persons": lambda s: (
+            f"Reconciled to {len(s.get('reconciled_persons', []))} person(s), "
+            f"{len(s.get('duplicate_groups', []))} duplicate group(s)"
+        ),
+        "classified_persons": lambda s: (
+            f"Classified {len(s.get('classified_persons', []))} person(s): "
+            f"{sum(1 for p in s.get('classified_persons', []) if getattr(p, 'classification', '') == 'CSM')} CSM"
+        ),
+    }
+    for key, summarizer in output_key_counts.items():
+        if state.get(key) is not None:
+            # Only return summary for the agent that writes this key
+            persons = state.get(key, [])
+            if persons:
+                return summarizer(state)
+    csm = state.get("csm_list", [])
+    non_csm = state.get("non_csm_list", [])
+    if csm or non_csm:
         return f"Output: {len(csm)} CSM, {len(non_csm)} NON_CSM"
     return None
 
 
 def _generate_output_summary_dict(agent_name: str, state: WorkflowState) -> dict[str, Any]:
-    """Generate an output summary dictionary for audit logging.
-
-    Args:
-        agent_name: Name of the agent.
-        state: Current workflow state after agent execution.
-
-    Returns:
-        Dictionary with summary statistics for audit trail.
-    """
-    if agent_name == "extractor":
-        persons = state.get("extracted_persons", [])
-        return {"persons_extracted": len(persons)}
-    elif agent_name == "reconciler":
-        persons = state.get("reconciled_persons", [])
-        groups = state.get("duplicate_groups", [])
-        return {
-            "persons_reconciled": len(persons),
-            "duplicate_groups": len(groups),
-        }
-    elif agent_name == "classifier":
-        persons = state.get("classified_persons", [])
-        csm = sum(1 for p in persons if getattr(p, "classification", "") == "CSM")
-        non_csm = len(persons) - csm
-        return {
-            "persons_classified": len(persons),
-            "csm_count": csm,
-            "non_csm_count": non_csm,
-        }
-    elif agent_name == "formatter":
-        csm = state.get("csm_list", [])
-        non_csm = state.get("non_csm_list", [])
-        return {
-            "csm_count": len(csm),
-            "non_csm_count": len(non_csm),
-        }
-    return {}
-
-
-def _get_phase_retry_count(state: WorkflowState, agent_name: str) -> int:
-    """Get retry count for the phase this agent belongs to."""
-    if agent_name in ("extractor", "critic_1"):
-        return state.get("extraction_retry_count", 0)
-    elif agent_name in ("reconciler", "critic_2"):
-        return state.get("reconciliation_retry_count", 0)
-    elif agent_name in ("classifier", "critic_3"):
-        return state.get("classification_retry_count", 0)
-    return 0
-
-
-# --- Critic Node Wrapper ---
-
-
-def create_critic_node(
-    critic_name: str,
-    critic_fn: Callable[[WorkflowState], tuple[CriticDecision, str | None]],
-    phase: Literal["extraction", "reconciliation", "classification"],
-) -> Callable[[WorkflowState], WorkflowState]:
-    """Create a wrapped critic node with 3-outcome routing.
-
-    The critic function returns a tuple of (decision, feedback).
-    This wrapper handles:
-    - Logging the decision
-    - Updating state with retry feedback or failure
-    - Setting up for the next transition
-
-    Args:
-        critic_name: Name of the critic agent.
-        critic_fn: Function that returns (CriticDecision, feedback_string).
-        phase: Which workflow phase this critic validates.
-
-    Returns:
-        Wrapped function that updates state based on critic decision.
-    """
-
-    def wrapped_critic(state: WorkflowState) -> WorkflowState:
-        workflow_id = state.get("workflow_id", "unknown")
-        retry_count = get_retry_count(state, phase)
-
-        logger.info(f"[{workflow_id}] Starting critic: {critic_name}")
-
-        try:
-            # Execute the critic
-            decision, feedback = critic_fn(state)
-
-            logger.info(
-                f"[{workflow_id}] Critic {critic_name} decision: {decision.value}"
-            )
-
-            # Emit critic_decision event
-            if EVENTS_ENABLED and get_event_emitter:
-                try:
-                    emitter = get_event_emitter(workflow_id)
-                    emitter.emit_critic_decision(critic_name, decision.value, feedback)
-                except Exception as e:
-                    logger.warning(f"Failed to emit critic_decision event: {e}")
-
-            # Log critic_decision to audit trail
-            if AUDIT_ENABLED:
-                try:
-                    audit = _get_audit_service()
-                    if audit:
-                        audit.log_critic_decision(
-                            workflow_run_id=workflow_id,
-                            critic_name=critic_name,
-                            decision=decision.value,
-                            feedback=feedback,
-                        )
-                except Exception as e:
-                    logger.warning(f"Failed to log critic_decision to audit: {e}")
-
-            # Always write last_critic_feedback so routing functions
-            # (src.core.conditions.route_critic_*) can read the latest decision.
-            from src.models.workflow import CriticFeedback
-            from uuid import uuid4
-            state = WorkflowState(**{
-                **state,
-                "last_critic_feedback": CriticFeedback(
-                    id=str(uuid4()),
-                    agent_execution_id=str(uuid4()),
-                    critic_agent_name=critic_name,
-                    decision=decision,
-                    suggested_corrections=feedback,
-                    created_at=datetime.now(),
-                ),
-            })
-
-            # Handle the decision
-            if decision == CriticDecision.PASS:
-                return _handle_critic_pass(state, phase)
-
-            elif decision == CriticDecision.FAIL_RETRY:
-                if can_retry(state, phase):
-                    agent_name = _get_agent_for_phase(phase)
-                    # Emit retry_triggered event
-                    if EVENTS_ENABLED and get_event_emitter:
-                        try:
-                            emitter = get_event_emitter(workflow_id)
-                            emitter.emit_retry_triggered(
-                                agent_name,
-                                retry_count + 1,
-                                feedback or "Retry requested",
-                            )
-                        except Exception as e:
-                            logger.warning(f"Failed to emit retry_triggered event: {e}")
-
-                    # Log retry_triggered to audit trail
-                    if AUDIT_ENABLED:
-                        try:
-                            audit = _get_audit_service()
-                            if audit:
-                                audit.log_retry_triggered(
-                                    workflow_run_id=workflow_id,
-                                    agent_name=agent_name,
-                                    retry_count=retry_count + 1,
-                                    reason=feedback or "Retry requested",
-                                    critic_feedback=feedback,
-                                )
-                        except Exception as e:
-                            logger.warning(f"Failed to log retry_triggered to audit: {e}")
-
-                    return _handle_critic_retry(
-                        state, phase, feedback or "Retry requested"
-                    )
-                else:
-                    # Max retries reached, treat as fail_max
-                    logger.warning(
-                        f"[{workflow_id}] Max retries reached for {phase}"
-                    )
-                    error_msg = f"Maximum retries ({MAX_RETRY_COUNT}) exceeded for {phase}"
-                    failed_agent = _get_agent_for_phase(phase)
-                    # Emit workflow_failed event
-                    if EVENTS_ENABLED and get_event_emitter:
-                        try:
-                            emitter = get_event_emitter(workflow_id)
-                            emitter.emit_workflow_failed(error_msg, failed_agent)
-                        except Exception as e:
-                            logger.warning(f"Failed to emit workflow_failed event: {e}")
-
-                    # Log workflow_failed to audit trail
-                    if AUDIT_ENABLED:
-                        try:
-                            audit = _get_audit_service()
-                            if audit:
-                                audit.log_workflow_failed(
-                                    workflow_run_id=workflow_id,
-                                    error=error_msg,
-                                    failed_agent=failed_agent,
-                                )
-                        except Exception as e:
-                            logger.warning(f"Failed to log workflow_failed to audit: {e}")
-
-                    return update_workflow_failed(state, error_msg)
-
-            else:  # FAIL_MAX
-                error_msg = f"Critic {critic_name} failed with max retries: {feedback or 'No feedback'}"
-                failed_agent = _get_agent_for_phase(phase)
-                # Emit workflow_failed event
-                if EVENTS_ENABLED and get_event_emitter:
-                    try:
-                        emitter = get_event_emitter(workflow_id)
-                        emitter.emit_workflow_failed(error_msg, failed_agent)
-                    except Exception as e:
-                        logger.warning(f"Failed to emit workflow_failed event: {e}")
-
-                # Log workflow_failed to audit trail
-                if AUDIT_ENABLED:
-                    try:
-                        audit = _get_audit_service()
-                        if audit:
-                            audit.log_workflow_failed(
-                                workflow_run_id=workflow_id,
-                                error=error_msg,
-                                failed_agent=failed_agent,
-                            )
-                    except Exception as e:
-                        logger.warning(f"Failed to log workflow_failed to audit: {e}")
-
-                return update_workflow_failed(state, error_msg)
-
-        except Exception as e:
-            logger.error(
-                f"[{workflow_id}] Critic {critic_name} failed: {e}",
-                exc_info=True,
-            )
-            error_msg = f"Critic {critic_name} failed: {str(e)}"
-            # Emit workflow_failed event
-            if EVENTS_ENABLED and get_event_emitter:
-                try:
-                    emitter = get_event_emitter(workflow_id)
-                    emitter.emit_workflow_failed(error_msg, critic_name)
-                except Exception as emit_err:
-                    logger.warning(f"Failed to emit workflow_failed event: {emit_err}")
-
-            # Log workflow_failed to audit trail
-            if AUDIT_ENABLED:
-                try:
-                    audit = _get_audit_service()
-                    if audit:
-                        audit.log_workflow_failed(
-                            workflow_run_id=workflow_id,
-                            error=error_msg,
-                            failed_agent=critic_name,
-                        )
-                except Exception as audit_err:
-                    logger.warning(f"Failed to log workflow_failed to audit: {audit_err}")
-
-            return update_workflow_failed(state, error_msg)
-
-    return wrapped_critic
-
-
-def _get_agent_for_phase(phase: str) -> str:
-    """Get the agent name for a workflow phase.
-
-    Args:
-        phase: The workflow phase name.
-
-    Returns:
-        The agent name for that phase.
-    """
-    phase_to_agent = {
-        "extraction": "extractor",
-        "reconciliation": "reconciler",
-        "classification": "classifier",
-    }
-    return phase_to_agent.get(phase, phase)
-
-
-def _handle_critic_pass(
-    state: WorkflowState,
-    phase: Literal["extraction", "reconciliation", "classification"],
-) -> WorkflowState:
-    """Handle critic pass decision."""
-    if phase == "extraction":
-        return update_extraction_passed(state)
-    elif phase == "reconciliation":
-        return update_reconciliation_passed(state)
-    else:  # classification
-        return update_classification_passed(state)
-
-
-def _handle_critic_retry(
-    state: WorkflowState,
-    phase: Literal["extraction", "reconciliation", "classification"],
-    feedback: str,
-) -> WorkflowState:
-    """Handle critic fail_retry decision."""
-    # Create a minimal critic feedback object for the retry state update
-    from src.models.workflow import CriticFeedback
-    from uuid import uuid4
-
-    critic_feedback = CriticFeedback(
-        id=str(uuid4()),
-        agent_execution_id=str(uuid4()),
-        critic_agent_name=f"critic_{['1', '2', '3'][['extraction', 'reconciliation', 'classification'].index(phase)]}",
-        decision=CriticDecision.FAIL_RETRY,
-        suggested_corrections=feedback,
-        created_at=datetime.now(),
-    )
-
-    if phase == "extraction":
-        return update_extraction_retry(state, feedback, critic_feedback)
-    elif phase == "reconciliation":
-        return update_reconciliation_retry(state, feedback, critic_feedback)
-    else:  # classification
-        return update_classification_retry(state, feedback, critic_feedback)
+    """Generate an output summary dict for audit logging."""
+    summary: dict[str, Any] = {}
+    for key in ("extracted_persons", "reconciled_persons", "classified_persons"):
+        items = state.get(key)
+        if items is not None:
+            summary[f"{key}_count"] = len(items)
+    for key in ("duplicate_groups", "csm_list", "non_csm_list"):
+        items = state.get(key)
+        if items is not None:
+            summary[f"{key}_count"] = len(items)
+    return summary
 
 
 # --- StateGraph Builder ---
 
 
 def build_workflow_graph(
-    agent_functions: dict[str, AgentFunction],
-    critic_functions: dict[str, Callable[[WorkflowState], tuple[CriticDecision, str | None]]],
+    functions: dict[str, AgentFunction],
     workflows_config: dict[str, Any] | None = None,
 ) -> StateGraph:
     """Build the LangGraph StateGraph driven by workflows.yaml (v1.2).
 
-    Reads nodes and edges from the YAML config so that graph topology
-    changes require only YAML edits, not Python changes.
+    All topology, agents, and runtime settings come from YAML — no hardcoding.
 
     Args:
-        agent_functions: Map of agent name → agent function.
-        critic_functions: Map of critic name → critic function (returns decision tuple).
+        functions: Single map of node_name → agent callable (built by build_agent_functions).
         workflows_config: Pre-loaded workflows config (loaded from file if not provided).
 
     Returns:
         StateGraph ready for compilation.
-
-    Raises:
-        ValueError: If a node references a function not in the provided maps.
-        ConfigError: If workflows config cannot be loaded.
     """
     if workflows_config is None:
         workflows_config = load_workflows_config()
@@ -589,48 +274,24 @@ def build_workflow_graph(
     edges_cfg = workflows_config.get("edges", [])
     workflow_meta = workflows_config.get("workflow", {})
 
-    # Combine both function maps for lookup
-    all_functions: dict[str, Any] = {**agent_functions, **critic_functions}
-
     graph = StateGraph(WorkflowState)
 
     # --- Add nodes from YAML ---
     for node_name, node_def in nodes_cfg.items():
-        node_type = node_def.get("type")
+        if node_def.get("type") == "end":
+            continue  # end nodes handled via add_edge(..., END)
 
-        if node_type == "end":
-            # End nodes are handled via graph.add_edge(..., END) — skip
-            continue
-
-        if node_type == "agent":
-            agent_key = node_def.get("agent", node_name)
-
-            if agent_key in critic_functions:
-                # Determine phase from agent key for the critic wrapper
-                phase = _phase_for_critic(agent_key)
-                wrapped = create_critic_node(
-                    agent_key,
-                    critic_functions[agent_key],
-                    phase,
-                )
-            elif agent_key in agent_functions:
-                wrapped = create_agent_node(
-                    agent_key,
-                    agent_functions[agent_key],
-                )
-            else:
-                raise ValueError(
-                    f"Node '{node_name}' references agent '{agent_key}' "
-                    f"but no matching function was provided"
-                )
-
-            graph.add_node(node_name, wrapped)
+        agent_fn = functions.get(node_name)
+        if agent_fn is None:
+            raise ValueError(
+                f"Node '{node_name}' has no matching function in the provided functions dict"
+            )
+        wrapped = create_agent_node(node_name, agent_fn)
+        graph.add_node(node_name, wrapped)
 
     # --- Set entry point from YAML ---
     entry_point = workflow_meta.get("entry_point", "__start__")
     if entry_point == "__start__":
-        # __start__ is a LangGraph sentinel; first unconditional edge from it
-        # sets the real entry node
         for edge in edges_cfg:
             if edge.get("from") == "__start__" and "to" in edge:
                 graph.set_entry_point(edge["to"])
@@ -641,12 +302,10 @@ def build_workflow_graph(
     # --- Add edges from YAML ---
     for edge in edges_cfg:
         from_node = edge.get("from")
-
         if from_node == "__start__":
-            continue  # handled above via set_entry_point
+            continue
 
         if "to" in edge:
-            # Unconditional edge
             to_node = edge["to"]
             if to_node == "end" or to_node not in nodes_cfg:
                 graph.add_edge(from_node, END)
@@ -654,65 +313,91 @@ def build_workflow_graph(
                 graph.add_edge(from_node, to_node)
 
         elif "condition" in edge:
-            # Conditional edge — load routing function from dotted path
             condition_cfg = edge["condition"]
-            fn_path = condition_cfg["fn"]
-            routing_fn = resolve_callable(fn_path)
-
+            routing_fn = resolve_callable(condition_cfg["fn"])
             raw_routes = condition_cfg.get("routes", {})
-            # Map "end" sentinel and "default" key to LangGraph END
-            routes_map = {}
-            for key, target in raw_routes.items():
-                if key == "default":
-                    continue
-                if target == "end" or target not in nodes_cfg:
-                    routes_map[key] = END
-                else:
-                    routes_map[key] = target
-
+            routes_map = {
+                key: (END if (target == "end" or target not in nodes_cfg) else target)
+                for key, target in raw_routes.items()
+                if key != "default"
+            }
             graph.add_conditional_edges(from_node, routing_fn, routes_map)
 
     return graph
 
 
-def _phase_for_critic(critic_name: str) -> Literal["extraction", "reconciliation", "classification"]:
-    """Map critic agent key to its workflow phase.
-
-    Args:
-        critic_name: The critic agent key (e.g. "critic_1").
-
-    Returns:
-        Phase name for use in create_critic_node().
-    """
-    phase_map = {
-        "critic_1": "extraction",
-        "critic_2": "reconciliation",
-        "critic_3": "classification",
-    }
-    phase = phase_map.get(critic_name)
-    if phase is None:
-        raise ValueError(
-            f"Unknown critic '{critic_name}'. "
-            f"Expected one of: {list(phase_map.keys())}"
-        )
-    return phase
-
-
 def compile_workflow(
-    agent_functions: dict[str, AgentFunction],
-    critic_functions: dict[str, Callable[[WorkflowState], tuple[CriticDecision, str | None]]],
+    workflows_config: dict[str, Any] | None = None,
+    agents_config: dict[str, Any] | None = None,
 ) -> Any:
-    """Build and compile the workflow graph.
+    """Build and compile the workflow graph from YAML config.
+
+    Loads both config files if not provided, builds all agent functions via
+    the factory, wires checkpointer and observability from runtime config.
 
     Args:
-        agent_functions: Map of agent name to agent function.
-        critic_functions: Map of critic name to critic function.
+        workflows_config: Pre-loaded workflows config (loaded from file if not provided).
+        agents_config: Pre-loaded agents config (loaded from file if not provided).
 
     Returns:
         Compiled workflow ready for invocation.
     """
-    graph = build_workflow_graph(agent_functions, critic_functions)
-    return graph.compile()
+    if workflows_config is None:
+        workflows_config = load_workflows_config()
+    if agents_config is None:
+        agents_config = load_agents_config()
+
+    # Wire observability from YAML before building
+    observability_cfg = workflows_config.get("observability", {})
+    if observability_cfg.get("provider") == "langsmith":
+        os.environ["LANGCHAIN_TRACING_V2"] = "true"
+        os.environ["LANGCHAIN_PROJECT"] = observability_cfg.get("project", "kyc")
+        logger.info(
+            f"LangSmith tracing enabled for project '{observability_cfg.get('project')}'"
+        )
+
+    # Build all agent functions from YAML
+    functions = build_agent_functions(agents_config, workflows_config)
+
+    graph = build_workflow_graph(functions, workflows_config)
+
+    # Wire checkpointer from runtime config
+    runtime_cfg = workflows_config.get("runtime", {})
+    checkpointer = _build_checkpointer(runtime_cfg)
+
+    interrupt_before = runtime_cfg.get("interrupt_before", []) or []
+    interrupt_after = runtime_cfg.get("interrupt_after", []) or []
+
+    compile_kwargs: dict[str, Any] = {}
+    if checkpointer:
+        compile_kwargs["checkpointer"] = checkpointer
+    if interrupt_before:
+        compile_kwargs["interrupt_before"] = interrupt_before
+    if interrupt_after:
+        compile_kwargs["interrupt_after"] = interrupt_after
+
+    return graph.compile(**compile_kwargs)
+
+
+def _build_checkpointer(runtime_cfg: dict[str, Any]) -> Any | None:
+    """Build a LangGraph checkpointer from runtime config."""
+    checkpointer_type = runtime_cfg.get("checkpointer", "memory")
+    uri = runtime_cfg.get("checkpointer_uri", "")
+
+    if checkpointer_type == "sqlite" and uri:
+        try:
+            from langgraph.checkpoint.sqlite import SqliteSaver
+            return SqliteSaver.from_conn_string(uri)
+        except ImportError:
+            logger.warning("langgraph-checkpoint-sqlite not installed, using MemorySaver")
+    elif checkpointer_type == "memory":
+        try:
+            from langgraph.checkpoint.memory import MemorySaver
+            return MemorySaver()
+        except ImportError:
+            pass
+
+    return None
 
 
 # --- Workflow Execution ---
@@ -858,6 +543,17 @@ def run_workflow_sync(
     try:
         # Run the workflow
         final_state = compiled_workflow.invoke(state)
+
+        # If the workflow ended via a FAIL_MAX critic decision, mark as failed
+        from src.models.enums import CriticDecision as _CriticDecision
+        last_fb = final_state.get("last_critic_feedback")
+        if (
+            final_state.get("status") not in ("completed", "failed")
+            and last_fb is not None
+            and getattr(last_fb, "decision", None) == _CriticDecision.FAIL_MAX
+        ):
+            reason = getattr(last_fb, "suggested_corrections", None) or "Maximum retries exceeded."
+            final_state = update_workflow_failed(final_state, reason, last_fb)
 
         status = final_state.get("status", "unknown")
         duration_seconds = (datetime.now() - start_time).total_seconds()

@@ -63,20 +63,7 @@ For each reconciled person:
 }
 ```
 
-Also provide a duplicate groups audit trail:
-
-```json
-{
-  "reconciled_persons": [...],
-  "duplicate_groups": [
-    {
-      "primary_person_id": "person_1",
-      "merged_extraction_ids": ["ext_1", "ext_5", "ext_8"],
-      "match_score": 0.95
-    }
-  ]
-}
-```
+Return the reconciled persons as a JSON array. Also provide a duplicate_groups field alongside if needed.
 
 ## Conflict Resolution Rules
 
@@ -90,27 +77,17 @@ When merging records with different values for the same field:
 
 ## Retry Feedback
 
-{{#if retry_feedback}}
-Previous reconciliation had issues. Please address the following feedback:
-
-{{{retry_feedback}}}
-
-Pay special attention to the issues mentioned and ensure they are corrected.
-{{/if}}
+{{reconciliation_feedback}}
 
 ## Extracted Persons to Reconcile
 
 ```json
-{{extracted_persons_json}}
+{{extracted_persons}}
 ```
 
 ## Your Response
 
-Process the extracted persons above and return:
-1. A list of reconciled persons with all duplicates merged
-2. A list of duplicate groups showing which extraction IDs were merged
-
-Ensure:
+Process the extracted persons above and return a JSON array of reconciled persons with all duplicates merged. Ensure:
 - Every source reference is preserved (no data loss)
 - All conflicts are properly flagged
 - Normalized names are provided for matching verification

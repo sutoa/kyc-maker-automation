@@ -1,8 +1,4 @@
-"""OpenAI LLM provider implementation.
-
-This module implements the LLMProvider interface for OpenAI models
-with exponential backoff retry logic (3 attempts).
-"""
+"""OpenAI LLM provider implementation."""
 
 import logging
 import os
@@ -15,6 +11,7 @@ from tenacity import (
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
+    wait_fixed,
 )
 
 from .base import (
@@ -40,23 +37,35 @@ except ImportError:
     OPENAI_AVAILABLE = False
 
 
-class OpenAIProvider(LLMProvider):
-    """OpenAI LLM provider with retry logic.
+def _build_wait(retry_cfg: dict[str, Any]) -> Any:
+    """Build a tenacity wait strategy from retry config."""
+    backoff = retry_cfg.get("backoff", "exponential")
+    delay = float(retry_cfg.get("delay_seconds", 2))
+    if backoff == "fixed":
+        return wait_fixed(delay)
+    elif backoff == "linear":
+        # wait_linear not available in all tenacity versions; use exponential as fallback
+        return wait_exponential(multiplier=1, min=delay, max=delay * 10)
+    else:  # exponential
+        return wait_exponential(multiplier=1, min=delay, max=delay * 30)
 
-    Implements exponential backoff retry (3 attempts) for transient failures.
-    """
+
+class OpenAIProvider(LLMProvider):
+    """OpenAI LLM provider with config-driven retry logic."""
 
     def __init__(
         self,
-        api_key: str | None = None,
         model: str = "gpt-4o",
+        retry_cfg: dict[str, Any] | None = None,
+        api_key: str | None = None,
         base_url: str | None = None,
     ):
         """Initialize the OpenAI provider.
 
         Args:
+            model: Model name (e.g. "gpt-4o-mini"). No provider prefix.
+            retry_cfg: Retry config from agents.yaml retry block.
             api_key: OpenAI API key (defaults to OPENAI_API_KEY env var).
-            model: Model to use (default: gpt-4o).
             base_url: Optional custom base URL for API.
         """
         if not OPENAI_AVAILABLE:
@@ -69,35 +78,25 @@ class OpenAIProvider(LLMProvider):
             raise LLMAuthenticationError("OPENAI_API_KEY not set")
 
         self._model = model
-        self._client = AsyncOpenAI(
-            api_key=self._api_key,
-            base_url=base_url,
-        )
+        self._retry_cfg = retry_cfg or {"max_attempts": 3, "backoff": "exponential", "delay_seconds": 2}
+        self._client = AsyncOpenAI(api_key=self._api_key, base_url=base_url)
 
     @property
     def model_name(self) -> str:
-        """Return the model name."""
         return self._model
 
     @property
     def provider_name(self) -> str:
-        """Return the provider name."""
         return "openai"
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=30),
-        retry=retry_if_exception_type((APIConnectionError, APIStatusError)),
-        reraise=True,
-    )
     async def _call_api(
         self,
         messages: list[dict[str, str]],
         temperature: float,
-        max_tokens: int | None,
+        max_tokens: int,
         **kwargs: Any,
     ) -> Any:
-        """Make the actual API call with retry logic."""
+        """Make the actual API call."""
         try:
             response = await self._client.chat.completions.create(
                 model=self._model,
@@ -115,34 +114,43 @@ class OpenAIProvider(LLMProvider):
     async def complete(
         self,
         messages: list[Message],
-        temperature: float = 0.7,
-        max_tokens: int | None = None,
+        temperature: float,
+        max_tokens: int,
         **kwargs: Any,
     ) -> LLMResponse:
         """Generate a completion using OpenAI.
 
         Args:
             messages: List of messages forming the conversation.
-            temperature: Sampling temperature (0.0 to 1.0).
-            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature from agent config.
+            max_tokens: Maximum output tokens from agent config.
             **kwargs: Additional OpenAI-specific parameters.
 
         Returns:
             LLMResponse with the generated content.
         """
-        # Convert messages to OpenAI format
+        max_attempts = int(self._retry_cfg.get("max_attempts", 3))
+        wait = _build_wait(self._retry_cfg)
+
+        retry_decorator = retry(
+            stop=stop_after_attempt(max_attempts),
+            wait=wait,
+            retry=retry_if_exception_type((APIConnectionError, APIStatusError) if OPENAI_AVAILABLE else Exception),
+            reraise=True,
+        )
+        call_with_retry = retry_decorator(self._call_api)
+
         openai_messages = [
             {"role": msg.role.value, "content": msg.content} for msg in messages
         ]
 
         try:
-            response = await self._call_api(
+            response = await call_with_retry(
                 messages=openai_messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
                 **kwargs,
             )
-
             return LLMResponse(
                 content=response.choices[0].message.content or "",
                 model=response.model,
@@ -154,10 +162,9 @@ class OpenAIProvider(LLMProvider):
                 raw_response=response,
             )
         except (APIConnectionError, APIStatusError) as e:
-            # After 3 retries, convert to service unavailable
-            logger.error(f"OpenAI service unavailable after 3 retries: {e}")
+            logger.error(f"OpenAI service unavailable after {max_attempts} retries: {e}")
             raise LLMServiceUnavailableError(
-                f"OpenAI service unavailable after 3 retries: {e}"
+                f"OpenAI service unavailable after {max_attempts} retries: {e}"
             )
         except LLMError:
             raise

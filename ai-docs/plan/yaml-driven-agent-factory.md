@@ -1,6 +1,6 @@
 # Implementation Plan: YAML-Driven Agent Factory
 
-**Status:** Pending
+**Status:** Complete (steps 8, 9, 13 intentionally skipped — see notes)
 **Date:** 2026-03-28
 **Branch:** 001-kyc-document-processing
 
@@ -10,22 +10,22 @@
 
 | Step | File(s) | Status |
 |------|---------|--------|
-| 1 | `src/config/agents.yaml` | `[ ] pending` |
-| 2 | `src/config/workflows.yaml` | `[ ] pending` |
-| 3 | `src/core/llm/base.py`, `openai.py`, `gemini.py` | `[ ] pending` |
-| 4 | `src/core/conditions.py` | `[ ] pending` |
-| 5 | `src/core/agent_factory.py` | `[ ] pending` |
-| 6 | `src/config/loader.py` | `[ ] pending` |
-| 7 | `src/core/workflow.py` | `[ ] pending` |
-| 8 | `src/core/state.py` | `[ ] pending` |
-| 9 | `src/services/matching.py` | `[ ] pending` |
-| 10 | `src/agents/extractor.py`, `critic.py`, `reconciler.py`, `classifier.py`, `formatter.py` | `[ ] pending` |
-| 11 | `src/prompts/extractor.md`, `reconciler.md`, `classifier.md` | `[ ] pending` |
-| 12 | `src/api/main.py` | `[ ] pending` |
-| 13 | `src/api/routes/workflows.py` | `[ ] pending` |
-| 14 | `tests/unit/test_config.py` | `[ ] pending` |
-| 15 | `tests/integration/test_workflow.py` + other integration tests | `[ ] pending` |
-| 16 | `pytest` (full suite) | `[ ] pending` |
+| 1 | `src/config/agents.yaml` | `[x] done` |
+| 2 | `src/config/workflows.yaml` | `[x] done` |
+| 3 | `src/core/llm/base.py`, `openai.py`, `gemini.py` | `[x] done` |
+| 4 | `src/core/conditions.py` | `[x] done` |
+| 5 | `src/core/agent_factory.py` | `[x] done` |
+| 6 | `src/config/loader.py` | `[x] done` |
+| 7 | `src/core/workflow.py` | `[x] done` |
+| 8 | `src/core/state.py` | `[-] skipped — MAX_RETRY_COUNT left; still used by legacy critic.py inner validation fns; user approved` |
+| 9 | `src/services/matching.py` | `[-] skipped — DEFAULT_THRESHOLD left as default param; user approved` |
+| 10 | `src/agents/extractor.py`, `critic.py`, `reconciler.py`, `classifier.py`, `formatter.py` | `[x] done — factory-compatible rule_fn wrappers added; render_prompt updated to {{key}} syntax; PROMPT_PATH left (still used by legacy render_prompt, user approved)` |
+| 11 | `src/prompts/extractor.md`, `reconciler.md`, `classifier.md` | `[x] done` |
+| 12 | `src/api/main.py` | `[x] done` |
+| 13 | `src/api/routes/workflows.py` | `[-] skipped — hardcoded agent name strings left; user approved` |
+| 14 | `tests/unit/test_config.py` | `[x] done` |
+| 15 | `tests/integration/test_workflow.py` + other integration tests | `[x] done` |
+| 16 | `pytest` (full suite) | `[x] done — 487 passed, 4 skipped, 0 failed` |
 
 ### Resume instructions
 1. Open this file and find the first row with `[ ] pending`
@@ -423,8 +423,8 @@ New test classes:
 
 ## Testing Checklist
 
-- [ ] `pytest tests/unit/test_config.py` — all factory + config tests
-- [ ] `pytest tests/integration/test_workflow.py` — YAML-driven build, no function dicts
-- [ ] `pytest tests/contract/` — agent contract tests, no regressions
-- [ ] `pytest tests/unit/test_state.py` — state management, no regressions
-- [ ] `pytest` (full suite)
+- [x] `pytest tests/unit/test_config.py` — all factory + config tests
+- [x] `pytest tests/integration/test_workflow.py` — YAML-driven build, no function dicts
+- [x] `pytest tests/contract/` — agent contract tests, no regressions
+- [x] `pytest tests/unit/test_state.py` — state management, no regressions
+- [x] `pytest` (full suite) — 487 passed, 4 skipped, 0 failed (2026-03-29)

@@ -14,6 +14,7 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.core.workflow import compile_workflow
 from src.services.database import init_db
 
 from .errors import ErrorCode, ErrorDetail, ErrorResponse
@@ -36,6 +37,8 @@ async def lifespan(app: FastAPI):
     logger.info("Starting KYC Document Processing API...")
     init_db()
     logger.info("Database initialized.")
+    app.state.compiled_workflow = compile_workflow()
+    logger.info("Workflow compiled from YAML config.")
     yield
     # Shutdown
     logger.info("Shutting down KYC Document Processing API...")

@@ -1,25 +1,36 @@
-"""Integration tests for LangGraph workflow graph compilation."""
+"""Integration tests for LangGraph workflow graph compilation.
+
+These tests wire up mock agent functions that match the factory contract
+(state: WorkflowState) -> WorkflowState, then build and run the graph
+using the YAML topology from workflows.yaml.  The LLM layer is never called.
+"""
+
+from datetime import datetime
+from typing import Any
+from uuid import uuid4
 
 import pytest
 
+from src.config.loader import load_workflows_config
 from src.core.state import WorkflowState, create_initial_state
 from src.core.workflow import (
     build_workflow_graph,
-    compile_workflow,
     create_agent_node,
-    create_critic_node,
     run_workflow_sync,
 )
 from src.models.enums import CriticDecision
+from src.models.output import DocumentManifestEntry
 from src.models.person import ClassifiedPerson, ExtractedPerson, ReconciledPerson, SourceReference
+from src.models.workflow import CriticFeedback
 from src.services.document import DocumentInput, PageContent
 
 
-# --- Test Fixtures ---
+# ---------------------------------------------------------------------------
+# Test data helpers
+# ---------------------------------------------------------------------------
 
 
 def create_test_document() -> DocumentInput:
-    """Create a test document for workflow testing."""
     return DocumentInput(
         document_id="test_doc_1",
         filename="test_document.pdf",
@@ -31,7 +42,6 @@ def create_test_document() -> DocumentInput:
 
 
 def create_test_extracted_persons() -> list[ExtractedPerson]:
-    """Create test extracted persons."""
     return [
         ExtractedPerson(
             extraction_id="ext_1",
@@ -69,7 +79,6 @@ def create_test_extracted_persons() -> list[ExtractedPerson]:
 
 
 def create_test_reconciled_persons() -> list[ReconciledPerson]:
-    """Create test reconciled persons."""
     return [
         ReconciledPerson(
             person_id="person_1",
@@ -79,13 +88,7 @@ def create_test_reconciled_persons() -> list[ReconciledPerson]:
             last_name_normalized="muller",
             job_title="Managing Director",
             job_title_original="Geschäftsführer",
-            source_references=[
-                SourceReference(
-                    document_id="test_doc_1",
-                    filename="test_document.pdf",
-                    page_number=1,
-                )
-            ],
+            source_references=[SourceReference(document_id="test_doc_1", filename="test_document.pdf", page_number=1)],
         ),
         ReconciledPerson(
             person_id="person_2",
@@ -94,32 +97,19 @@ def create_test_reconciled_persons() -> list[ReconciledPerson]:
             first_name_normalized="anna",
             last_name_normalized="schmidt",
             job_title="Administrative Clerk",
-            source_references=[
-                SourceReference(
-                    document_id="test_doc_1",
-                    filename="test_document.pdf",
-                    page_number=1,
-                )
-            ],
+            source_references=[SourceReference(document_id="test_doc_1", filename="test_document.pdf", page_number=1)],
         ),
     ]
 
 
 def create_test_classified_persons() -> list[ClassifiedPerson]:
-    """Create test classified persons."""
     return [
         ClassifiedPerson(
             person_id="person_1",
             first_name="Hans",
             last_name="Müller",
             job_title="Managing Director",
-            source_references=[
-                SourceReference(
-                    document_id="test_doc_1",
-                    filename="test_document.pdf",
-                    page_number=1,
-                )
-            ],
+            source_references=[SourceReference(document_id="test_doc_1", filename="test_document.pdf", page_number=1)],
             classification="CSM",
             reasoning="Managing Director (Geschäftsführer) is an executive role per Criterion 1.",
             criteria_met=["Criterion 1: Executive Management Role"],
@@ -129,13 +119,7 @@ def create_test_classified_persons() -> list[ClassifiedPerson]:
             first_name="Anna",
             last_name="Schmidt",
             job_title="Administrative Clerk",
-            source_references=[
-                SourceReference(
-                    document_id="test_doc_1",
-                    filename="test_document.pdf",
-                    page_number=1,
-                )
-            ],
+            source_references=[SourceReference(document_id="test_doc_1", filename="test_document.pdf", page_number=1)],
             classification="NON_CSM",
             reasoning="Administrative Clerk has no executive authority.",
             criteria_not_met=["Criterion 1-5: No CSM criteria met"],
@@ -143,48 +127,27 @@ def create_test_classified_persons() -> list[ClassifiedPerson]:
     ]
 
 
-# --- Mock Agent Functions ---
+# ---------------------------------------------------------------------------
+# Mock agent functions — factory contract: (state) -> WorkflowState
+# ---------------------------------------------------------------------------
 
 
 def mock_extractor(state: WorkflowState) -> WorkflowState:
-    """Mock extractor that returns test extracted persons."""
-    return WorkflowState(
-        **{
-            **state,
-            "extracted_persons": create_test_extracted_persons(),
-        }
-    )
+    return WorkflowState(**{**state, "extracted_persons": create_test_extracted_persons()})
 
 
 def mock_reconciler(state: WorkflowState) -> WorkflowState:
-    """Mock reconciler that returns test reconciled persons."""
-    return WorkflowState(
-        **{
-            **state,
-            "reconciled_persons": create_test_reconciled_persons(),
-            "duplicate_groups": [],
-        }
-    )
+    return WorkflowState(**{**state, "reconciled_persons": create_test_reconciled_persons(), "duplicate_groups": []})
 
 
 def mock_classifier(state: WorkflowState) -> WorkflowState:
-    """Mock classifier that returns test classified persons."""
-    return WorkflowState(
-        **{
-            **state,
-            "classified_persons": create_test_classified_persons(),
-        }
-    )
+    return WorkflowState(**{**state, "classified_persons": create_test_classified_persons()})
 
 
 def mock_formatter(state: WorkflowState) -> WorkflowState:
-    """Mock formatter that creates final output."""
-    from src.models.output import DocumentManifestEntry
-
     classified = state.get("classified_persons", [])
     csm_list = [p for p in classified if p.classification == "CSM"]
     non_csm_list = [p for p in classified if p.classification == "NON_CSM"]
-
     return WorkflowState(
         **{
             **state,
@@ -204,23 +167,87 @@ def mock_formatter(state: WorkflowState) -> WorkflowState:
     )
 
 
-def mock_critic_pass(state: WorkflowState) -> tuple[CriticDecision, str | None]:
-    """Mock critic that always passes."""
-    return (CriticDecision.PASS, None)
+def _pass_feedback(critic_name: str) -> CriticFeedback:
+    return CriticFeedback(
+        id=str(uuid4()),
+        agent_execution_id=str(uuid4()),
+        critic_agent_name=critic_name,
+        decision=CriticDecision.PASS,
+        suggested_corrections=None,
+        created_at=datetime.now(),
+    )
 
 
-def mock_critic_fail_once(fail_count: dict) -> callable:
-    """Create a mock critic that fails once then passes."""
-    def critic(state: WorkflowState) -> tuple[CriticDecision, str | None]:
-        key = state.get("current_agent", "unknown")
-        if fail_count.get(key, 0) == 0:
-            fail_count[key] = 1
-            return (CriticDecision.FAIL_RETRY, "Please retry with improvements")
-        return (CriticDecision.PASS, None)
-    return critic
+def mock_critic_1_pass(state: WorkflowState) -> WorkflowState:
+    return WorkflowState(**{**state, "last_critic_feedback": _pass_feedback("critic_1")})
 
 
-# --- Test Classes ---
+def mock_critic_2_pass(state: WorkflowState) -> WorkflowState:
+    return WorkflowState(**{**state, "last_critic_feedback": _pass_feedback("critic_2")})
+
+
+def mock_critic_3_pass(state: WorkflowState) -> WorkflowState:
+    return WorkflowState(**{**state, "last_critic_feedback": _pass_feedback("critic_3")})
+
+
+def _fail_retry_feedback(critic_name: str, message: str) -> CriticFeedback:
+    return CriticFeedback(
+        id=str(uuid4()),
+        agent_execution_id=str(uuid4()),
+        critic_agent_name=critic_name,
+        decision=CriticDecision.FAIL_RETRY,
+        suggested_corrections=message,
+        created_at=datetime.now(),
+    )
+
+
+def make_critic_1_fail_once() -> tuple[Any, list[int]]:
+    """Return (critic_1 mock, call_counter) that FAIL_RETRYs once then PASSes."""
+    calls: list[int] = [0]
+
+    def critic_fn(state: WorkflowState) -> WorkflowState:
+        calls[0] += 1
+        if calls[0] == 1:
+            fb = _fail_retry_feedback("critic_1", "Please retry with improvements")
+        else:
+            fb = _pass_feedback("critic_1")
+        return WorkflowState(**{**state, "last_critic_feedback": fb})
+
+    return critic_fn, calls
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def build_mock_graph(
+    extractor_fn=mock_extractor,
+    critic_1_fn=mock_critic_1_pass,
+    reconciler_fn=mock_reconciler,
+    critic_2_fn=mock_critic_2_pass,
+    classifier_fn=mock_classifier,
+    critic_3_fn=mock_critic_3_pass,
+    formatter_fn=mock_formatter,
+):
+    """Build a compiled workflow with injected mock functions."""
+    workflows_config = load_workflows_config()
+    functions = {
+        "extractor": extractor_fn,
+        "critic_1": critic_1_fn,
+        "reconciler": reconciler_fn,
+        "critic_2": critic_2_fn,
+        "classifier": classifier_fn,
+        "critic_3": critic_3_fn,
+        "formatter": formatter_fn,
+    }
+    graph = build_workflow_graph(functions, workflows_config)
+    return graph.compile()
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
 
 class TestBuildWorkflowGraph:
@@ -228,77 +255,18 @@ class TestBuildWorkflowGraph:
 
     def test_build_graph_with_all_agents(self):
         """Test building graph with all required agents."""
-        agent_functions = {
-            "extractor": mock_extractor,
-            "reconciler": mock_reconciler,
-            "classifier": mock_classifier,
-            "formatter": mock_formatter,
-        }
-        critic_functions = {
-            "critic_1": mock_critic_pass,
-            "critic_2": mock_critic_pass,
-            "critic_3": mock_critic_pass,
-        }
-
-        graph = build_workflow_graph(agent_functions, critic_functions)
-
-        # Verify graph was created
-        assert graph is not None
-
-    def test_build_graph_missing_agent_raises(self):
-        """Test that missing agent raises ValueError."""
-        agent_functions = {
-            "extractor": mock_extractor,
-            # Missing: reconciler, classifier, formatter
-        }
-        critic_functions = {
-            "critic_1": mock_critic_pass,
-            "critic_2": mock_critic_pass,
-            "critic_3": mock_critic_pass,
-        }
-
-        # YAML-driven builder raises when a node references a missing function
-        with pytest.raises(ValueError, match="no matching function was provided"):
-            build_workflow_graph(agent_functions, critic_functions)
-
-    def test_build_graph_missing_critic_raises(self):
-        """Test that missing critic raises ValueError."""
-        agent_functions = {
-            "extractor": mock_extractor,
-            "reconciler": mock_reconciler,
-            "classifier": mock_classifier,
-            "formatter": mock_formatter,
-        }
-        critic_functions = {
-            "critic_1": mock_critic_pass,
-            # Missing: critic_2, critic_3
-        }
-
-        # YAML-driven builder raises when a critic node references a missing function
-        with pytest.raises(ValueError, match="no matching function was provided"):
-            build_workflow_graph(agent_functions, critic_functions)
-
-
-class TestCompileWorkflow:
-    """Tests for workflow compilation."""
-
-    def test_compile_workflow_succeeds(self):
-        """Test that workflow compiles successfully."""
-        agent_functions = {
-            "extractor": mock_extractor,
-            "reconciler": mock_reconciler,
-            "classifier": mock_classifier,
-            "formatter": mock_formatter,
-        }
-        critic_functions = {
-            "critic_1": mock_critic_pass,
-            "critic_2": mock_critic_pass,
-            "critic_3": mock_critic_pass,
-        }
-
-        compiled = compile_workflow(agent_functions, critic_functions)
-
+        compiled = build_mock_graph()
         assert compiled is not None
+
+    def test_build_graph_missing_node_raises(self):
+        """Test that missing node function raises ValueError."""
+        workflows_config = load_workflows_config()
+        functions = {
+            "extractor": mock_extractor,
+            # Missing: critic_1, reconciler, critic_2, classifier, critic_3, formatter
+        }
+        with pytest.raises(ValueError, match="no matching function"):
+            build_workflow_graph(functions, workflows_config)
 
 
 class TestWorkflowExecution:
@@ -306,19 +274,7 @@ class TestWorkflowExecution:
 
     def test_successful_workflow_execution(self):
         """Test complete successful workflow execution."""
-        agent_functions = {
-            "extractor": mock_extractor,
-            "reconciler": mock_reconciler,
-            "classifier": mock_classifier,
-            "formatter": mock_formatter,
-        }
-        critic_functions = {
-            "critic_1": mock_critic_pass,
-            "critic_2": mock_critic_pass,
-            "critic_3": mock_critic_pass,
-        }
-
-        compiled = compile_workflow(agent_functions, critic_functions)
+        compiled = build_mock_graph()
         initial_state = create_initial_state([create_test_document()])
 
         final_state = run_workflow_sync(compiled, initial_state)
@@ -330,46 +286,20 @@ class TestWorkflowExecution:
         assert final_state["non_csm_list"][0].first_name == "Anna"
 
     def test_workflow_with_extraction_retry(self):
-        """Test workflow with one extraction retry."""
-        fail_count: dict = {}
-
-        agent_functions = {
-            "extractor": mock_extractor,
-            "reconciler": mock_reconciler,
-            "classifier": mock_classifier,
-            "formatter": mock_formatter,
-        }
-        critic_functions = {
-            "critic_1": mock_critic_fail_once(fail_count),
-            "critic_2": mock_critic_pass,
-            "critic_3": mock_critic_pass,
-        }
-
-        compiled = compile_workflow(agent_functions, critic_functions)
+        """Test workflow with one extraction retry (critic fails once then passes)."""
+        critic_fn, call_counter = make_critic_1_fail_once()
+        compiled = build_mock_graph(critic_1_fn=critic_fn)
         initial_state = create_initial_state([create_test_document()])
 
         final_state = run_workflow_sync(compiled, initial_state)
 
-        # Should still complete after retry
         assert final_state["status"] == "completed"
-        # Retry count should have incremented
-        assert final_state.get("extraction_retry_count", 0) >= 1
+        # critic_1 was called twice: once FAIL_RETRY, once PASS
+        assert call_counter[0] >= 2
 
     def test_workflow_preserves_workflow_id(self):
         """Test that workflow ID is preserved throughout execution."""
-        agent_functions = {
-            "extractor": mock_extractor,
-            "reconciler": mock_reconciler,
-            "classifier": mock_classifier,
-            "formatter": mock_formatter,
-        }
-        critic_functions = {
-            "critic_1": mock_critic_pass,
-            "critic_2": mock_critic_pass,
-            "critic_3": mock_critic_pass,
-        }
-
-        compiled = compile_workflow(agent_functions, critic_functions)
+        compiled = build_mock_graph()
         initial_state = create_initial_state(
             [create_test_document()],
             workflow_id="test-workflow-123",
@@ -409,74 +339,12 @@ class TestAgentNodeWrapper:
         assert "Agent failed" in (result_state.get("failure_reason") or "")
 
 
-class TestCriticNodeWrapper:
-    """Tests for critic node wrapper."""
-
-    def test_critic_wrapper_handles_pass(self):
-        """Test critic wrapper with PASS decision."""
-        def passing_critic(state: WorkflowState) -> tuple[CriticDecision, str | None]:
-            return (CriticDecision.PASS, None)
-
-        wrapped = create_critic_node("critic_1", passing_critic, "extraction")
-        initial_state = create_initial_state([create_test_document()])
-
-        result_state = wrapped(initial_state)
-
-        # Should move to next agent (reconciler)
-        assert result_state["current_agent"] == "reconciler"
-        assert result_state["extraction_feedback"] is None
-
-    def test_critic_wrapper_handles_fail_retry(self):
-        """Test critic wrapper with FAIL_RETRY decision."""
-        def retrying_critic(state: WorkflowState) -> tuple[CriticDecision, str | None]:
-            return (CriticDecision.FAIL_RETRY, "Please improve extraction")
-
-        wrapped = create_critic_node("critic_1", retrying_critic, "extraction")
-        initial_state = create_initial_state([create_test_document()])
-
-        result_state = wrapped(initial_state)
-
-        # Should retry extractor
-        assert result_state["current_agent"] == "extractor"
-        assert result_state["extraction_retry_count"] == 1
-        assert result_state["extraction_feedback"] == "Please improve extraction"
-
-    def test_critic_wrapper_handles_max_retries(self):
-        """Test critic wrapper when max retries exceeded."""
-        def retrying_critic(state: WorkflowState) -> tuple[CriticDecision, str | None]:
-            return (CriticDecision.FAIL_RETRY, "Keep trying")
-
-        wrapped = create_critic_node("critic_1", retrying_critic, "extraction")
-
-        # Set retry count to max
-        initial_state = create_initial_state([create_test_document()])
-        initial_state = WorkflowState(**{**initial_state, "extraction_retry_count": 4})
-
-        result_state = wrapped(initial_state)
-
-        # Should fail workflow
-        assert result_state["status"] == "failed"
-        assert "Maximum retries" in (result_state.get("failure_reason") or "")
-
-
 class TestWorkflowIntegration:
     """Integration tests for complete workflow scenarios."""
 
     def test_document_manifest_created(self):
         """Test that document manifest is created in output."""
-        agent_functions = {
-            "extractor": mock_extractor,
-            "reconciler": mock_reconciler,
-            "classifier": mock_classifier,
-            "formatter": mock_formatter,
-        }
-        critic_functions = {
-            "critic_1": mock_critic_pass,
-            "critic_2": mock_critic_pass,
-            "critic_3": mock_critic_pass,
-        }
-
-        compiled = compile_workflow(agent_functions, critic_functions)
+        compiled = build_mock_graph()
         initial_state = create_initial_state([create_test_document()])
 
         final_state = run_workflow_sync(compiled, initial_state)
@@ -487,27 +355,13 @@ class TestWorkflowIntegration:
 
     def test_csm_classification_correct(self):
         """Test that CSM/NON_CSM classification is correct."""
-        agent_functions = {
-            "extractor": mock_extractor,
-            "reconciler": mock_reconciler,
-            "classifier": mock_classifier,
-            "formatter": mock_formatter,
-        }
-        critic_functions = {
-            "critic_1": mock_critic_pass,
-            "critic_2": mock_critic_pass,
-            "critic_3": mock_critic_pass,
-        }
-
-        compiled = compile_workflow(agent_functions, critic_functions)
+        compiled = build_mock_graph()
         initial_state = create_initial_state([create_test_document()])
 
         final_state = run_workflow_sync(compiled, initial_state)
 
-        # Hans Müller (Geschäftsführer) should be CSM
         csm_names = [p.first_name for p in final_state["csm_list"]]
         assert "Hans" in csm_names
 
-        # Anna Schmidt (Sachbearbeiterin) should be NON_CSM
         non_csm_names = [p.first_name for p in final_state["non_csm_list"]]
         assert "Anna" in non_csm_names

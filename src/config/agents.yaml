@@ -25,7 +25,6 @@ version: "1.2"
 # DEFAULTS
 # Agent-level defaults. Any field here is inherited by all
 # agents unless explicitly overridden on the agent itself.
-# Workflow-level defaults take lower precedence than these.
 # ──────────────────────────────────────────────────────────────
 defaults:
   model: openai/gpt-4o-mini
@@ -46,11 +45,16 @@ defaults:
 #   role        — professional identity injected into system prompt
 #   goal        — primary objective; supports {var} interpolation
 #   backstory   — background context that shapes agent behaviour
+#   execution   — "llm": call LLM with system_prompt
+#                 "rule": call a Python function via rule_fn
+#   rule_fn     — dotted Python path (execution: rule only)
 #   model       — LiteLLM model string: provider/model-name
 #   temperature — 0.0–1.0; overrides defaults.temperature
 #   max_tokens  — max response tokens; overrides defaults.max_tokens
 #   input_keys  — state keys this agent reads as context
 #   output_key  — state key this agent writes its result to
+#   retry_count_key — state key incremented by node wrapper on FAIL_RETRY
+#   matching_threshold — fuzzy match threshold (reconciler only)
 #
 #   system_prompt — two modes (mutually exclusive):
 #     inline: "..."        embed the prompt directly in this file
@@ -59,6 +63,7 @@ defaults:
 #   output_schema — two modes (mutually exclusive):
 #     ref: my_pkg.ClassName    Pydantic class; strict structured output
 #     example: {...}           sample JSON object; loader infers schema
+#     is_list: true/false      whether output is a list of ref (default false)
 # ──────────────────────────────────────────────────────────────
 agents:
 
@@ -71,10 +76,13 @@ agents:
       documents. You handle German documents with umlauts and specialised terminology,
       always capturing job titles in both the original language and English translation.
       You never invent data — if a field is not present, you leave it null.
+    execution: llm
     input_keys: [documents, extraction_feedback]
     output_key: extracted_persons
+    retry_count_key: extraction_retry_count
     output_schema:
       ref: src.models.person.ExtractedPerson
+      is_list: true
     system_prompt:
       file: ../prompts/extractor.md
 
@@ -87,10 +95,12 @@ agents:
       data standards. You ensure extracted records meet all mandatory field requirements
       before they proceed to deduplication. You are fair but uncompromising on
       data completeness.
+    execution: llm
     input_keys: [extracted_persons, extraction_retry_count]
     output_key: last_critic_feedback
     output_schema:
       ref: src.models.workflow.CriticFeedback
+      is_list: false
     system_prompt:
       file: ../prompts/critic_1.md
 
@@ -103,10 +113,14 @@ agents:
       appearing multiple times under slightly different names or formats, merge their
       records into a single canonical entry, preserve all source references, and flag
       any conflicting field values for downstream review.
+    execution: llm
     input_keys: [extracted_persons, reconciliation_feedback]
     output_key: reconciled_persons
+    retry_count_key: reconciliation_retry_count
+    matching_threshold: 0.85
     output_schema:
       ref: src.models.person.ReconciledPerson
+      is_list: true
     system_prompt:
       file: ../prompts/reconciler.md
 
@@ -119,12 +133,13 @@ agents:
       You detect missed duplicates, incorrect merges, and lost source references.
       Your approval means the deduplicated record set faithfully represents all
       persons found across the source documents.
+    execution: rule
+    rule_fn: src.agents.critic.validate_reconciliation_for_factory
     input_keys: [reconciled_persons, duplicate_groups, reconciliation_retry_count]
     output_key: last_critic_feedback
     output_schema:
       ref: src.models.workflow.CriticFeedback
-    system_prompt:
-      file: ../prompts/critic_2.md
+      is_list: false
 
   # ── classifier ─────────────────────────────────────────────
   classifier:
@@ -136,10 +151,13 @@ agents:
       specific criterion met or not met for each person, and provide supporting evidence
       from the source documents. You never classify without a clear, criteria-based
       justification.
+    execution: llm
     input_keys: [reconciled_persons, classification_feedback]
     output_key: classified_persons
+    retry_count_key: classification_retry_count
     output_schema:
       ref: src.models.person.ClassifiedPerson
+      is_list: true
     system_prompt:
       file: ../prompts/classifier.md
 
@@ -153,12 +171,13 @@ agents:
       reasoning is consistent with the stated evidence, and that no person has been
       classified without substantive justification. Your approval certifies the
       classification is audit-ready.
+    execution: rule
+    rule_fn: src.agents.critic.validate_classification_for_factory
     input_keys: [classified_persons, classification_retry_count]
     output_key: last_critic_feedback
     output_schema:
       ref: src.models.workflow.CriticFeedback
-    system_prompt:
-      file: ../prompts/critic_3.md
+      is_list: false
 
   # ── formatter ──────────────────────────────────────────────
   formatter:
@@ -168,9 +187,11 @@ agents:
       You are a structured data specialist who assembles the final workflow output.
       You organise classified persons into CSM and NON_CSM lists, compile the document
       manifest, and ensure the output conforms exactly to the required JSON schema.
+    execution: llm
     input_keys: [classified_persons, documents]
     output_key: document_manifest
     output_schema:
       ref: src.models.output.WorkflowOutput
+      is_list: false
     system_prompt:
       file: ../prompts/formatter.md

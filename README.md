@@ -49,15 +49,17 @@ The system is built around a **7-agent LangGraph pipeline** where each processin
 
 ### Agent Reference
 
-| Agent | Type | Responsibility |
-|-------|------|----------------|
+| Agent | Execution | Responsibility |
+|-------|-----------|----------------|
 | **Extractor** | LLM | Extract all persons from document text with source references |
-| **Critic 1** | Rule-based | Validate names present, sources cited, confidence adequate |
-| **Reconciler** | Algorithm + LLM | Deduplicate persons across documents using fuzzy matching |
-| **Critic 2** | Rule-based | Validate no missed merges, no incorrect merges, conflicts flagged |
+| **Critic 1** | LLM | Validate names present, sources cited, confidence adequate |
+| **Reconciler** | LLM | Deduplicate persons across documents using fuzzy matching |
+| **Critic 2** | Rule (`validate_reconciliation_for_factory`) | Validate no missed merges, no incorrect merges, conflicts flagged |
 | **Classifier** | LLM | Classify each person as CSM or Non-CSM with reasoning |
-| **Critic 3** | Rule-based | Validate reasoning non-empty, criteria cited, evidence provided |
-| **Formatter** | Deterministic | Assemble final JSON output with manifest and person lists |
+| **Critic 3** | Rule (`validate_classification_for_factory`) | Validate reasoning non-empty, criteria cited, evidence provided |
+| **Formatter** | LLM | Assemble final JSON output with manifest and person lists |
+
+> Execution type (`llm` or `rule`) and all parameters are declared in `src/config/agents.yaml` — no hardcoding in source.
 
 ### Critic Decision Pattern
 
@@ -94,6 +96,8 @@ kyc-maker-automation/
 │   │
 │   ├── core/                    # Workflow engine
 │   │   ├── workflow.py          #   LangGraph builder & executor
+│   │   ├── agent_factory.py     #   YAML-driven agent function builder
+│   │   ├── conditions.py        #   Generic critic routing (route_on_critic_decision)
 │   │   ├── state.py             #   WorkflowState TypedDict & helpers
 │   │   ├── events.py            #   Event emission for WebSocket
 │   │   └── llm/                 #   Model-agnostic LLM abstraction
@@ -273,10 +277,8 @@ GET  /workflows/{id}/output  →  Download results JSON
 
 ```bash
 # ── LLM Provider ──────────────────────────────────────────────
-LLM_PROVIDER=openai          # "openai" or "gemini"
-OPENAI_API_KEY=sk-...        # Required for OpenAI
-OPENAI_MODEL=gpt-4o-mini     # Default model
-GOOGLE_API_KEY=...           # Required for Gemini
+OPENAI_API_KEY=sk-...        # Required if using openai/* models
+GOOGLE_API_KEY=...           # Required if using gemini/* models
 
 # ── Database ──────────────────────────────────────────────────
 DATABASE_URL=sqlite:///./kyc_workflows.db
@@ -286,12 +288,6 @@ UPLOAD_DIR=./uploads
 OUTPUT_DIR=./outputs
 MAX_FILE_SIZE_MB=50
 
-# ── Workflow Tuning ───────────────────────────────────────────
-MAX_RETRY_ATTEMPTS=4         # Max critic retries per phase
-LLM_RETRY_ATTEMPTS=3         # LLM call retries on transient errors
-LLM_RETRY_MIN_WAIT=2
-LLM_RETRY_MAX_WAIT=30
-
 # ── Application ───────────────────────────────────────────────
 API_HOST=0.0.0.0
 API_PORT=8000
@@ -299,33 +295,57 @@ LOG_LEVEL=INFO
 SQL_ECHO=false               # Set "true" to log SQL queries
 ```
 
+> **Model, temperature, max_tokens, and retry settings are no longer env vars.** They are configured per-agent in `src/config/agents.yaml` and apply at build time via the agent factory.
+
 ### Agent & Workflow Configuration
 
-Agents and the state machine transitions are defined in YAML — no code changes needed to tune LLM parameters or retry logic.
+All agents, LLM parameters, retry logic, and workflow topology are declared in YAML — no code changes needed to tune behaviour.
 
 ```yaml
-# src/config/agents.yaml  (excerpt)
-extractor:
-  type: extractor
-  llm:
-    model: gpt-4o-mini
-    temperature: 0
-    max_tokens: 4096
+# src/config/agents.yaml  (excerpt — v1.2)
+defaults:
+  model: openai/gpt-4o-mini
+  temperature: 0
+  max_tokens: 16384
   retry:
-    max_retries: 4
-    backoff_seconds: 1.0
+    max_attempts: 4
+    backoff: exponential
+    delay_seconds: 1
+
+agents:
+  extractor:
+    execution: llm
+    system_prompt:
+      file: ../prompts/extractor.md
+    input_keys: [documents, extraction_feedback]
+    output_key: extracted_persons
+    retry_count_key: extraction_retry_count
+    output_schema:
+      ref: src.models.person.ExtractedPerson
+      is_list: true
+
+  critic_2:
+    execution: rule
+    rule_fn: src.agents.critic.validate_reconciliation_for_factory
+    input_keys: [reconciled_persons, reconciliation_retry_count]
+    output_key: last_critic_feedback
 ```
 
 ```yaml
-# src/config/workflows.yaml  (excerpt)
-transitions:
-  extractor:
-    on_complete: critic_1
-  critic_1:
-    on_pass: reconciler
-    on_fail_retry: extractor
-    on_fail_max: FAILED
+# src/config/workflows.yaml  (excerpt — v1.2)
+edges:
+  - from: extractor
+    to: critic_1
+  - from: critic_1
+    condition:
+      fn: src.core.conditions.route_on_critic_decision
+      routes:
+        pass: reconciler
+        fail_retry: extractor
+        fail_max: end
 ```
+
+At startup, `compile_workflow()` reads both files, calls `build_agent_functions()` to create all agent callables from the YAML declarations, then builds and compiles the LangGraph graph. No agent code is touched when tuning parameters.
 
 ---
 

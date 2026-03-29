@@ -148,31 +148,29 @@ def validate_agents_config(config: dict[str, Any]) -> None:
     errors = []
     agents = config.get("agents", {})
 
-    required_agents = [
-        "extractor",
-        "critic_1",
-        "reconciler",
-        "critic_2",
-        "classifier",
-        "critic_3",
-        "formatter",
-    ]
-    for agent_name in required_agents:
-        if agent_name not in agents:
-            errors.append({
-                "path": f"agents.{agent_name}",
-                "message": f"Required agent '{agent_name}' is missing",
-            })
+    # Required agents are derived from workflow nodes that reference agents.
+    # At pure agents.yaml validation time we only check that each defined agent
+    # has valid structure. Cross-validation against workflow nodes happens in
+    # validate_workflows_config().
 
     for name, agent in agents.items():
-        # system_prompt must have file or inline (JSON schema enforces oneOf,
-        # but validate here for clearer error messages too)
-        sp = agent.get("system_prompt", {})
-        if not isinstance(sp, dict) or ("file" not in sp and "inline" not in sp):
-            errors.append({
-                "path": f"agents.{name}.system_prompt",
-                "message": "Must have exactly one of 'file' or 'inline'",
-            })
+        execution = agent.get("execution", "llm")
+
+        # LLM agents must have system_prompt
+        if execution == "llm":
+            sp = agent.get("system_prompt", {})
+            if not isinstance(sp, dict) or ("file" not in sp and "inline" not in sp):
+                errors.append({
+                    "path": f"agents.{name}.system_prompt",
+                    "message": "LLM agents must have system_prompt with 'file' or 'inline'",
+                })
+        # Rule agents must have rule_fn
+        elif execution == "rule":
+            if not agent.get("rule_fn"):
+                errors.append({
+                    "path": f"agents.{name}.rule_fn",
+                    "message": "Rule agents must have 'rule_fn' (dotted Python path)",
+                })
 
         # output_schema, if present, must have ref or example
         os_ = agent.get("output_schema")
@@ -527,6 +525,81 @@ def get_unconditional_target(
             return edge["to"]
 
     return None
+
+
+def resolve_agents_ref(workflows_config: dict[str, Any]) -> Path:
+    """Resolve the agents_ref path from workflows.yaml.
+
+    Reads the agents_ref field and resolves it relative to workflows.yaml
+    so that the agents file location is fully config-driven.
+
+    Args:
+        workflows_config: Loaded workflows configuration.
+
+    Returns:
+        Absolute path to the agents.yaml file.
+
+    Raises:
+        ConfigError: If agents_ref is missing or the file does not exist.
+    """
+    agents_ref = workflows_config.get("agents_ref")
+    if not agents_ref:
+        raise ConfigError("'agents_ref' not found in workflows config")
+
+    # Resolve relative to the workflows.yaml location
+    agents_path = (_WORKFLOWS_FILE.parent / agents_ref).resolve()
+    if not agents_path.exists():
+        raise ConfigError(f"agents_ref path does not exist: {agents_path}")
+
+    return agents_path
+
+
+def build_agent_functions(
+    agents_config: dict[str, Any],
+    workflows_config: dict[str, Any],
+) -> dict[str, Callable]:
+    """Build all agent callables from YAML config.
+
+    Iterates over workflow nodes, resolves each agent's effective config
+    (defaults merged in), and calls the factory to build the callable.
+    Returns a single dict keyed by node name — no separate agent/critic split.
+
+    Args:
+        agents_config: Loaded agents configuration.
+        workflows_config: Loaded workflows configuration.
+
+    Returns:
+        Dict mapping node_name → agent callable, ready for build_workflow_graph().
+
+    Raises:
+        ConfigError: If any agent cannot be built.
+    """
+    from src.core.agent_factory import build_agent_fn
+
+    agents_dir = resolve_agents_ref(workflows_config).parent
+    nodes = workflows_config.get("nodes", {})
+    functions: dict[str, Callable] = {}
+
+    for node_name, node_def in nodes.items():
+        node_type = node_def.get("type")
+        if node_type == "end":
+            continue
+
+        agent_key = node_def.get("agent", node_name)
+        effective_cfg = get_effective_agent_config(agent_key, agents_config)
+
+        try:
+            fn = build_agent_fn(agent_key, effective_cfg, agents_dir)
+            functions[node_name] = fn
+            logger.debug(
+                f"Built agent function for node '{node_name}' "
+                f"(agent='{agent_key}', execution='{effective_cfg.get('execution', 'llm')}')"
+            )
+        except Exception as e:
+            raise ConfigError(f"Failed to build agent '{agent_key}': {e}") from e
+
+    logger.info(f"Built {len(functions)} agent functions from YAML config")
+    return functions
 
 
 def resolve_callable(dotted_path: str) -> Callable:

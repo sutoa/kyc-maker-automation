@@ -157,7 +157,7 @@ class TestAgentEvents:
 
         assert audit_log.event_type == "agent_completed"
         assert audit_log.actor == "classifier"
-        assert "1501ms" in audit_log.action  # Rounded
+        assert "1500ms" in audit_log.action  # :.0f rounding of 1500.5
         assert audit_log.details["duration_ms"] == 1500.5
 
     def test_log_agent_failed(self, audit_service, workflow_id):

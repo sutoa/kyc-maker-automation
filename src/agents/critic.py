@@ -13,8 +13,10 @@ Each critic returns a 3-outcome decision:
 
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
@@ -25,6 +27,7 @@ from src.models.enums import CriticDecision
 from src.models.person import ClassifiedPerson, ExtractedPerson, ReconciledPerson
 from src.models.workflow import (
     ClassificationIssue,
+    CriticFeedback,
     ExtractionIssue,
     ReconciliationIssue,
 )
@@ -531,3 +534,90 @@ def critic_3_agent(state: WorkflowState) -> tuple[CriticDecision, str | None]:
     )
 
     return (output.decision, output.feedback)
+
+
+# ---------------------------------------------------------------------------
+# Factory-compatible rule functions (execution: rule)
+#
+# These are the entry points referenced by rule_fn in agents.yaml.
+# Signature contract: (state: WorkflowState) -> CriticFeedback
+#
+# The agent_factory enforces max_attempts BEFORE calling these functions,
+# so they never need to check retry counts — they only return PASS or
+# FAIL_RETRY.
+# ---------------------------------------------------------------------------
+
+
+def validate_reconciliation_for_factory(state: WorkflowState) -> CriticFeedback:
+    """Rule-based reconciliation validator. Referenced as critic_2 rule_fn.
+
+    Reads reconciled_persons and extracted_persons from state, runs
+    deterministic checks, and returns a CriticFeedback object.
+
+    Args:
+        state: Current workflow state.
+
+    Returns:
+        CriticFeedback with PASS or FAIL_RETRY decision.
+    """
+    workflow_id = state.get("workflow_id", "unknown")
+    reconciled_persons = state.get("reconciled_persons", [])
+    extracted_count = len(state.get("extracted_persons", []))
+
+    # Pass retry_count=0 so the inner function never returns FAIL_MAX;
+    # max-attempts enforcement is handled by the factory before this call.
+    output = validate_reconciliation(reconciled_persons, extracted_count, retry_count=0)
+
+    issues_dicts = [issue.model_dump() for issue in output.issues]
+
+    logger.info(
+        f"[{workflow_id}] validate_reconciliation_for_factory: "
+        f"decision={output.decision.value}, issues={len(output.issues)}"
+    )
+
+    return CriticFeedback(
+        id=str(uuid4()),
+        agent_execution_id=str(uuid4()),
+        critic_agent_name="critic_2",
+        decision=output.decision,
+        issues_found=issues_dicts,
+        suggested_corrections=output.feedback,
+        created_at=datetime.now(),
+    )
+
+
+def validate_classification_for_factory(state: WorkflowState) -> CriticFeedback:
+    """Rule-based classification validator. Referenced as critic_3 rule_fn.
+
+    Reads classified_persons from state, runs deterministic checks, and
+    returns a CriticFeedback object.
+
+    Args:
+        state: Current workflow state.
+
+    Returns:
+        CriticFeedback with PASS or FAIL_RETRY decision.
+    """
+    workflow_id = state.get("workflow_id", "unknown")
+    classified_persons = state.get("classified_persons", [])
+
+    # Pass retry_count=0 so the inner function never returns FAIL_MAX;
+    # max-attempts enforcement is handled by the factory before this call.
+    output = validate_classification(classified_persons, retry_count=0)
+
+    issues_dicts = [issue.model_dump() for issue in output.issues]
+
+    logger.info(
+        f"[{workflow_id}] validate_classification_for_factory: "
+        f"decision={output.decision.value}, issues={len(output.issues)}"
+    )
+
+    return CriticFeedback(
+        id=str(uuid4()),
+        agent_execution_id=str(uuid4()),
+        critic_agent_name="critic_3",
+        decision=output.decision,
+        issues_found=issues_dicts,
+        suggested_corrections=output.feedback,
+        created_at=datetime.now(),
+    )

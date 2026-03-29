@@ -103,24 +103,13 @@ For each person extracted, provide:
 
 ## Retry Feedback
 
-{{#if retry_feedback}}
-Previous extraction had issues. Please address the following feedback:
-
-{{{retry_feedback}}}
-
-Pay special attention to the issues mentioned and ensure they are corrected in this extraction.
-{{/if}}
+{{extraction_feedback}}
 
 ## Documents to Process
 
-{{#each documents}}
-### Document: {{filename}} (ID: {{document_id}})
-Type: {{file_type}} | Pages: {{page_count}}
-
-{{{content}}}
-
----
-{{/each}}
+```json
+{{documents}}
+```
 
 ## Your Response
 

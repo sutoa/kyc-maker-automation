@@ -143,11 +143,19 @@ class TestLoadAgentsConfig:
             assert "backstory" in agent,   f"Agent {name} missing 'backstory'"
             assert "input_keys" in agent,  f"Agent {name} missing 'input_keys'"
             assert "output_key" in agent,  f"Agent {name} missing 'output_key'"
-            assert "system_prompt" in agent, f"Agent {name} missing 'system_prompt'"
+            # system_prompt is only required for LLM agents (not rule-based)
+            execution = agent.get("execution", "llm")
+            if execution == "llm":
+                assert "system_prompt" in agent, f"Agent {name} missing 'system_prompt'"
+            elif execution == "rule":
+                assert "rule_fn" in agent, f"Agent {name} missing 'rule_fn'"
 
     def test_agent_system_prompt_has_file_or_inline(self):
         config = load_agents_config()
         for name, agent in config["agents"].items():
+            # system_prompt only exists on LLM agents
+            if agent.get("execution", "llm") != "llm":
+                continue
             sp = agent["system_prompt"]
             assert "file" in sp or "inline" in sp, (
                 f"Agent {name}: system_prompt must have 'file' or 'inline'"
@@ -182,12 +190,18 @@ class TestValidateAgentsConfig:
     def test_valid_config_passes(self):
         validate_agents_config(_minimal_agents_config())  # should not raise
 
-    def test_missing_required_agent_fails(self):
+    def test_missing_rule_fn_fails(self):
+        """Rule-based agent without rule_fn raises ConfigValidationError."""
         config = _minimal_agents_config()
-        del config["agents"]["critic_1"]
+        config["agents"]["critic_2"] = {
+            "role": "R", "goal": "G", "backstory": "B",
+            "input_keys": [], "output_key": "last_critic_feedback",
+            "execution": "rule",
+            # rule_fn intentionally omitted
+        }
         with pytest.raises(ConfigValidationError) as exc:
             validate_agents_config(config)
-        assert any("critic_1" in str(e) for e in exc.value.errors)
+        assert any("rule_fn" in str(e) for e in exc.value.errors)
 
     def test_missing_system_prompt_fails(self):
         config = _minimal_agents_config()
@@ -456,13 +470,13 @@ class TestGetUnconditionalTarget:
 
 class TestResolveCallable:
     def test_resolve_valid_callable(self):
-        fn = resolve_callable("src.core.conditions.route_critic_1")
+        fn = resolve_callable("src.core.conditions.route_on_critic_decision")
         assert callable(fn)
 
     def test_resolve_all_critic_routes(self):
-        for name in ("route_critic_1", "route_critic_2", "route_critic_3"):
-            fn = resolve_callable(f"src.core.conditions.{name}")
-            assert callable(fn)
+        # Single generic routing function replaces per-critic functions
+        fn = resolve_callable("src.core.conditions.route_on_critic_decision")
+        assert callable(fn)
 
     def test_resolve_invalid_module_raises(self):
         with pytest.raises(ConfigError, match="Cannot import"):
