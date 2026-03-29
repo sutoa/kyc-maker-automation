@@ -20,7 +20,10 @@ from typing import Any, Callable, Literal
 
 from langgraph.graph import END, StateGraph
 
-from src.config.loader import get_agent_config, get_transition, get_workflow_config
+from src.config.loader import (
+    load_workflows_config,
+    resolve_callable,
+)
 from src.core.state import (
     MAX_RETRY_COUNT,
     WorkflowState,
@@ -356,6 +359,22 @@ def create_critic_node(
                 except Exception as e:
                     logger.warning(f"Failed to log critic_decision to audit: {e}")
 
+            # Always write last_critic_feedback so routing functions
+            # (src.core.conditions.route_critic_*) can read the latest decision.
+            from src.models.workflow import CriticFeedback
+            from uuid import uuid4
+            state = WorkflowState(**{
+                **state,
+                "last_critic_feedback": CriticFeedback(
+                    id=str(uuid4()),
+                    agent_execution_id=str(uuid4()),
+                    critic_agent_name=critic_name,
+                    decision=decision,
+                    suggested_corrections=feedback,
+                    created_at=datetime.now(),
+                ),
+            })
+
             # Handle the decision
             if decision == CriticDecision.PASS:
                 return _handle_critic_pass(state, phase)
@@ -517,7 +536,7 @@ def _handle_critic_retry(
     feedback: str,
 ) -> WorkflowState:
     """Handle critic fail_retry decision."""
-    # Create a minimal critic feedback object
+    # Create a minimal critic feedback object for the retry state update
     from src.models.workflow import CriticFeedback
     from uuid import uuid4
 
@@ -538,188 +557,145 @@ def _handle_critic_retry(
         return update_classification_retry(state, feedback, critic_feedback)
 
 
-# --- Conditional Edge Functions ---
-
-
-def should_continue_after_critic(
-    phase: Literal["extraction", "reconciliation", "classification"],
-) -> Callable[[WorkflowState], str]:
-    """Create a conditional edge function for critic outcomes.
-
-    Returns a function that determines the next node based on:
-    - Current state status (failed -> END)
-    - Current agent (to determine if retry happened)
-
-    Args:
-        phase: The workflow phase for this critic.
-
-    Returns:
-        Function that returns the next node name.
-    """
-    # Map phase to agents
-    phase_to_agents = {
-        "extraction": ("extractor", "critic_1", "reconciler"),
-        "reconciliation": ("reconciler", "critic_2", "classifier"),
-        "classification": ("classifier", "critic_3", "formatter"),
-    }
-    agent, critic, next_agent = phase_to_agents[phase]
-
-    def route(state: WorkflowState) -> str:
-        # Check if workflow failed
-        if state.get("status") == "failed":
-            return "FAILED"
-
-        # Check current agent to determine outcome
-        current = state.get("current_agent", "")
-
-        if current == agent:
-            # Retry was triggered
-            return agent
-        elif current in (next_agent, "formatter", ""):
-            # Pass - move to next agent
-            return next_agent if next_agent != "formatter" else "formatter"
-        else:
-            # Default to next agent
-            return next_agent
-
-    return route
-
-
-def check_workflow_status(state: WorkflowState) -> str:
-    """Check if workflow should continue or end.
-
-    Returns:
-        "continue" if workflow should continue, "FAILED" if failed.
-    """
-    if state.get("status") == "failed":
-        return "FAILED"
-    return "continue"
-
-
 # --- StateGraph Builder ---
 
 
 def build_workflow_graph(
     agent_functions: dict[str, AgentFunction],
     critic_functions: dict[str, Callable[[WorkflowState], tuple[CriticDecision, str | None]]],
+    workflows_config: dict[str, Any] | None = None,
 ) -> StateGraph:
-    """Build the complete LangGraph StateGraph for KYC processing.
+    """Build the LangGraph StateGraph driven by workflows.yaml (v1.2).
+
+    Reads nodes and edges from the YAML config so that graph topology
+    changes require only YAML edits, not Python changes.
 
     Args:
-        agent_functions: Map of agent name to agent function.
-            Required: extractor, reconciler, classifier, formatter
-        critic_functions: Map of critic name to critic function.
-            Required: critic_1, critic_2, critic_3
+        agent_functions: Map of agent name → agent function.
+        critic_functions: Map of critic name → critic function (returns decision tuple).
+        workflows_config: Pre-loaded workflows config (loaded from file if not provided).
 
     Returns:
-        Compiled StateGraph ready for execution.
+        StateGraph ready for compilation.
 
     Raises:
-        ValueError: If required agents/critics are missing.
+        ValueError: If a node references a function not in the provided maps.
+        ConfigError: If workflows config cannot be loaded.
     """
-    # Validate required functions
-    required_agents = ["extractor", "reconciler", "classifier", "formatter"]
-    required_critics = ["critic_1", "critic_2", "critic_3"]
+    if workflows_config is None:
+        workflows_config = load_workflows_config()
 
-    for agent in required_agents:
-        if agent not in agent_functions:
-            raise ValueError(f"Missing required agent function: {agent}")
+    nodes_cfg = workflows_config.get("nodes", {})
+    edges_cfg = workflows_config.get("edges", [])
+    workflow_meta = workflows_config.get("workflow", {})
 
-    for critic in required_critics:
-        if critic not in critic_functions:
-            raise ValueError(f"Missing required critic function: {critic}")
+    # Combine both function maps for lookup
+    all_functions: dict[str, Any] = {**agent_functions, **critic_functions}
 
-    # Create the graph
     graph = StateGraph(WorkflowState)
 
-    # Add agent nodes (wrapped)
-    graph.add_node(
-        "extractor",
-        create_agent_node("extractor", agent_functions["extractor"], "critic_1"),
-    )
-    graph.add_node(
-        "reconciler",
-        create_agent_node("reconciler", agent_functions["reconciler"], "critic_2"),
-    )
-    graph.add_node(
-        "classifier",
-        create_agent_node("classifier", agent_functions["classifier"], "critic_3"),
-    )
-    graph.add_node(
-        "formatter",
-        create_agent_node("formatter", agent_functions["formatter"]),
-    )
+    # --- Add nodes from YAML ---
+    for node_name, node_def in nodes_cfg.items():
+        node_type = node_def.get("type")
 
-    # Add critic nodes (wrapped)
-    graph.add_node(
-        "critic_1",
-        create_critic_node("critic_1", critic_functions["critic_1"], "extraction"),
-    )
-    graph.add_node(
-        "critic_2",
-        create_critic_node("critic_2", critic_functions["critic_2"], "reconciliation"),
-    )
-    graph.add_node(
-        "critic_3",
-        create_critic_node("critic_3", critic_functions["critic_3"], "classification"),
-    )
+        if node_type == "end":
+            # End nodes are handled via graph.add_edge(..., END) — skip
+            continue
 
-    # Add failure node
-    graph.add_node("FAILED", lambda state: state)
+        if node_type == "agent":
+            agent_key = node_def.get("agent", node_name)
 
-    # Set entry point
-    graph.set_entry_point("extractor")
+            if agent_key in critic_functions:
+                # Determine phase from agent key for the critic wrapper
+                phase = _phase_for_critic(agent_key)
+                wrapped = create_critic_node(
+                    agent_key,
+                    critic_functions[agent_key],
+                    phase,
+                )
+            elif agent_key in agent_functions:
+                wrapped = create_agent_node(
+                    agent_key,
+                    agent_functions[agent_key],
+                )
+            else:
+                raise ValueError(
+                    f"Node '{node_name}' references agent '{agent_key}' "
+                    f"but no matching function was provided"
+                )
 
-    # Add edges
-    # Extractor -> Critic 1
-    graph.add_edge("extractor", "critic_1")
+            graph.add_node(node_name, wrapped)
 
-    # Critic 1 -> conditional (extractor retry or reconciler)
-    graph.add_conditional_edges(
-        "critic_1",
-        should_continue_after_critic("extraction"),
-        {
-            "extractor": "extractor",
-            "reconciler": "reconciler",
-            "FAILED": "FAILED",
-        },
-    )
+    # --- Set entry point from YAML ---
+    entry_point = workflow_meta.get("entry_point", "__start__")
+    if entry_point == "__start__":
+        # __start__ is a LangGraph sentinel; first unconditional edge from it
+        # sets the real entry node
+        for edge in edges_cfg:
+            if edge.get("from") == "__start__" and "to" in edge:
+                graph.set_entry_point(edge["to"])
+                break
+    else:
+        graph.set_entry_point(entry_point)
 
-    # Reconciler -> Critic 2
-    graph.add_edge("reconciler", "critic_2")
+    # --- Add edges from YAML ---
+    for edge in edges_cfg:
+        from_node = edge.get("from")
 
-    # Critic 2 -> conditional (reconciler retry or classifier)
-    graph.add_conditional_edges(
-        "critic_2",
-        should_continue_after_critic("reconciliation"),
-        {
-            "reconciler": "reconciler",
-            "classifier": "classifier",
-            "FAILED": "FAILED",
-        },
-    )
+        if from_node == "__start__":
+            continue  # handled above via set_entry_point
 
-    # Classifier -> Critic 3
-    graph.add_edge("classifier", "critic_3")
+        if "to" in edge:
+            # Unconditional edge
+            to_node = edge["to"]
+            if to_node == "end" or to_node not in nodes_cfg:
+                graph.add_edge(from_node, END)
+            else:
+                graph.add_edge(from_node, to_node)
 
-    # Critic 3 -> conditional (classifier retry or formatter)
-    graph.add_conditional_edges(
-        "critic_3",
-        should_continue_after_critic("classification"),
-        {
-            "classifier": "classifier",
-            "formatter": "formatter",
-            "FAILED": "FAILED",
-        },
-    )
+        elif "condition" in edge:
+            # Conditional edge — load routing function from dotted path
+            condition_cfg = edge["condition"]
+            fn_path = condition_cfg["fn"]
+            routing_fn = resolve_callable(fn_path)
 
-    # Formatter -> END
-    graph.add_edge("formatter", END)
+            raw_routes = condition_cfg.get("routes", {})
+            # Map "end" sentinel and "default" key to LangGraph END
+            routes_map = {}
+            for key, target in raw_routes.items():
+                if key == "default":
+                    continue
+                if target == "end" or target not in nodes_cfg:
+                    routes_map[key] = END
+                else:
+                    routes_map[key] = target
 
-    # FAILED -> END
-    graph.add_edge("FAILED", END)
+            graph.add_conditional_edges(from_node, routing_fn, routes_map)
 
     return graph
+
+
+def _phase_for_critic(critic_name: str) -> Literal["extraction", "reconciliation", "classification"]:
+    """Map critic agent key to its workflow phase.
+
+    Args:
+        critic_name: The critic agent key (e.g. "critic_1").
+
+    Returns:
+        Phase name for use in create_critic_node().
+    """
+    phase_map = {
+        "critic_1": "extraction",
+        "critic_2": "reconciliation",
+        "critic_3": "classification",
+    }
+    phase = phase_map.get(critic_name)
+    if phase is None:
+        raise ValueError(
+            f"Unknown critic '{critic_name}'. "
+            f"Expected one of: {list(phase_map.keys())}"
+        )
+    return phase
 
 
 def compile_workflow(

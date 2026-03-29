@@ -1,0 +1,216 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "workflow.schema.json",
+  "title": "Workflow Configuration Schema v1.2",
+  "description": "Schema for validating KYC workflows.yaml (AGENTFLOW v1.2)",
+  "definitions": {
+    "retryConfig": {
+      "type": "object",
+      "properties": {
+        "max_attempts": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "backoff": { "type": "string", "enum": ["linear", "exponential", "fixed"] },
+        "delay_seconds": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "model": { "type": "string" },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 1 },
+        "max_tokens": { "type": "integer", "minimum": 1, "maximum": 128000 },
+        "retry": { "$ref": "#/definitions/retryConfig" }
+      },
+      "additionalProperties": false
+    },
+    "stateField": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["string", "integer", "number", "boolean", "object", "array"]
+        },
+        "default": {}
+      },
+      "additionalProperties": false
+    },
+    "agentNode": {
+      "type": "object",
+      "required": ["type", "agent"],
+      "properties": {
+        "type": { "const": "agent" },
+        "agent": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "endNode": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "end" }
+      },
+      "additionalProperties": false
+    },
+    "parallelNode": {
+      "type": "object",
+      "required": ["type", "branches"],
+      "properties": {
+        "type": { "const": "parallel" },
+        "branches": { "type": "array", "items": { "type": "string" } },
+        "merge_strategy": { "type": "string", "enum": ["merge_all", "first", "reduce"] }
+      },
+      "additionalProperties": false
+    },
+    "humanNode": {
+      "type": "object",
+      "required": ["type", "prompt"],
+      "properties": {
+        "type": { "const": "human" },
+        "prompt": { "type": "string" },
+        "timeout_seconds": { "type": "integer" },
+        "on_timeout": { "type": "string" },
+        "input_keys": { "type": "array", "items": { "type": "string" } },
+        "output_key": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "unconditionalEdge": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": "string" },
+        "to": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "conditionalEdge": {
+      "type": "object",
+      "required": ["from", "condition"],
+      "properties": {
+        "from": { "type": "string" },
+        "condition": {
+          "type": "object",
+          "required": ["fn", "routes"],
+          "properties": {
+            "fn": {
+              "type": "string",
+              "description": "Fully-qualified Python callable: fn(state: dict) -> str"
+            },
+            "routes": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "on_traverse": {
+          "type": "object",
+          "properties": {
+            "when_route": { "type": "string" },
+            "increment_key": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "required": ["version", "workflow", "nodes", "edges"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "workflow": {
+      "type": "object",
+      "required": ["id", "name", "entry_point"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "entry_point": { "type": "string" },
+        "max_steps": { "type": "integer", "minimum": 1 },
+        "timeout_seconds": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "agents_ref": {
+      "type": "string",
+      "description": "Relative path to agents.yaml"
+    },
+    "defaults": {
+      "$ref": "#/definitions/defaults"
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": { "type": "string", "enum": ["builtin", "mcp", "function", "langchain"] },
+          "name": { "type": "string" },
+          "ref": { "type": "string" },
+          "server_url": { "type": "string" },
+          "class": { "type": "string" },
+          "args": { "type": "object" }
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/stateField"
+      }
+    },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "$ref": "#/definitions/agentNode" },
+          { "$ref": "#/definitions/endNode" },
+          { "$ref": "#/definitions/parallelNode" },
+          { "$ref": "#/definitions/humanNode" }
+        ]
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/unconditionalEdge" },
+          { "$ref": "#/definitions/conditionalEdge" }
+        ]
+      }
+    },
+    "observability": {
+      "type": "object",
+      "properties": {
+        "provider": { "type": "string", "enum": ["langsmith", "langfuse", "none"] },
+        "project": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "trace_state": { "type": "boolean" },
+        "trace_inputs": { "type": "boolean" },
+        "trace_outputs": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "framework": { "type": "string" },
+        "checkpointer": { "type": "string", "enum": ["sqlite", "postgres", "memory", "redis"] },
+        "checkpointer_uri": { "type": "string" },
+        "interrupt_before": { "type": "array", "items": { "type": "string" } },
+        "interrupt_after": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "vars": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

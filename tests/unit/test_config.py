@@ -1,6 +1,5 @@
-"""Unit tests for configuration loading and validation."""
+"""Unit tests for configuration loading and validation (AGENTFLOW v1.2)."""
 
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -10,464 +9,515 @@ from src.config.loader import (
     ConfigError,
     ConfigValidationError,
     get_agent_config,
-    get_transition,
+    get_edge_routes,
+    get_effective_agent_config,
+    get_unconditional_target,
     get_workflow_config,
     load_agents_config,
     load_all_configs,
     load_workflows_config,
     load_yaml,
+    resolve_callable,
     validate_agents_config,
     validate_workflows_config,
 )
 
 
+# ---------------------------------------------------------------------------
+# Fixtures — minimal valid v1.2 configs for use in validation tests
+# ---------------------------------------------------------------------------
+
+def _minimal_agents_config() -> dict:
+    """Minimal valid agents config with all 7 required KYC agents."""
+    agent = {
+        "role": "Test Role",
+        "goal": "Test goal",
+        "backstory": "Test backstory.",
+        "input_keys": ["documents"],
+        "output_key": "extracted_persons",
+        "system_prompt": {"file": "../prompts/extractor.md"},
+        "output_schema": {"ref": "src.models.person.ExtractedPerson"},
+    }
+    return {
+        "version": "1.2",
+        "agents": {
+            "extractor": {**agent},
+            "critic_1": {**agent, "output_key": "last_critic_feedback"},
+            "reconciler": {**agent, "output_key": "reconciled_persons"},
+            "critic_2": {**agent, "output_key": "last_critic_feedback"},
+            "classifier": {**agent, "output_key": "classified_persons"},
+            "critic_3": {**agent, "output_key": "last_critic_feedback"},
+            "formatter": {**agent, "output_key": "document_manifest"},
+        },
+    }
+
+
+def _minimal_workflows_config() -> dict:
+    """Minimal valid workflows config with nodes + edges."""
+    return {
+        "version": "1.2",
+        "workflow": {
+            "id": "kyc_document_processing",
+            "name": "KYC Test",
+            "entry_point": "__start__",
+        },
+        "nodes": {
+            "extractor": {"type": "agent", "agent": "extractor"},
+            "critic_1": {"type": "agent", "agent": "critic_1"},
+            "end": {"type": "end"},
+        },
+        "edges": [
+            {"from": "__start__", "to": "extractor"},
+            {"from": "extractor", "to": "critic_1"},
+            {
+                "from": "critic_1",
+                "condition": {
+                    "fn": "src.core.conditions.route_critic_1",
+                    "routes": {
+                        "pass": "end",
+                        "fail_retry": "extractor",
+                        "fail_max": "end",
+                    },
+                },
+            },
+            {"from": "critic_1", "to": "end"},
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# TestLoadYaml
+# ---------------------------------------------------------------------------
+
+
 class TestLoadYaml:
-    """Tests for YAML loading."""
-
     def test_load_valid_yaml(self, tmp_path):
-        """Test loading a valid YAML file."""
-        yaml_file = tmp_path / "test.yaml"
-        yaml_file.write_text("key: value\nlist:\n  - item1\n  - item2")
-
-        result = load_yaml(yaml_file)
-
+        f = tmp_path / "test.yaml"
+        f.write_text("key: value\nlist:\n  - item1\n  - item2")
+        result = load_yaml(f)
         assert result["key"] == "value"
         assert result["list"] == ["item1", "item2"]
 
     def test_load_missing_file(self, tmp_path):
-        """Test loading a non-existent file raises error."""
         with pytest.raises(ConfigError, match="not found"):
             load_yaml(tmp_path / "nonexistent.yaml")
 
     def test_load_invalid_yaml(self, tmp_path):
-        """Test loading invalid YAML raises error."""
-        yaml_file = tmp_path / "invalid.yaml"
-        yaml_file.write_text("key: [invalid yaml")
-
+        f = tmp_path / "invalid.yaml"
+        f.write_text("key: [invalid yaml")
         with pytest.raises(ConfigError, match="Invalid YAML"):
-            load_yaml(yaml_file)
+            load_yaml(f)
+
+
+# ---------------------------------------------------------------------------
+# TestLoadAgentsConfig — bundled agents.yaml
+# ---------------------------------------------------------------------------
 
 
 class TestLoadAgentsConfig:
-    """Tests for agents configuration loading."""
-
     def test_load_bundled_agents_config(self):
-        """Test loading the bundled agents.yaml."""
         config = load_agents_config()
-
         assert config is not None
         assert "version" in config
         assert "agents" in config
 
+    def test_bundled_config_version(self):
+        config = load_agents_config()
+        assert config["version"] == "1.2"
+
     def test_bundled_config_has_all_agents(self):
-        """Test that bundled config has all required agents."""
         config = load_agents_config()
         agents = config["agents"]
-
-        required_agents = [
-            "extractor",
-            "critic_1",
-            "reconciler",
-            "critic_2",
-            "classifier",
-            "critic_3",
-            "formatter",
+        required = [
+            "extractor", "critic_1", "reconciler",
+            "critic_2", "classifier", "critic_3", "formatter",
         ]
+        for name in required:
+            assert name in agents, f"Missing agent: {name}"
 
-        for agent_name in required_agents:
-            assert agent_name in agents, f"Missing agent: {agent_name}"
-
-    def test_agent_has_required_fields(self):
-        """Test that agents have required fields."""
+    def test_agent_has_v12_required_fields(self):
         config = load_agents_config()
-
         for name, agent in config["agents"].items():
-            assert "name" in agent, f"Agent {name} missing 'name'"
-            assert "type" in agent, f"Agent {name} missing 'type'"
-            assert "prompt_file" in agent, f"Agent {name} missing 'prompt_file'"
+            assert "role" in agent,        f"Agent {name} missing 'role'"
+            assert "goal" in agent,        f"Agent {name} missing 'goal'"
+            assert "backstory" in agent,   f"Agent {name} missing 'backstory'"
+            assert "input_keys" in agent,  f"Agent {name} missing 'input_keys'"
+            assert "output_key" in agent,  f"Agent {name} missing 'output_key'"
+            assert "system_prompt" in agent, f"Agent {name} missing 'system_prompt'"
 
-    def test_critic_agents_have_validates_phase(self):
-        """Test that critic agents have validates_phase."""
+    def test_agent_system_prompt_has_file_or_inline(self):
         config = load_agents_config()
-
         for name, agent in config["agents"].items():
-            if agent.get("type") == "critic":
-                assert "validates_phase" in agent, f"Critic {name} missing 'validates_phase'"
+            sp = agent["system_prompt"]
+            assert "file" in sp or "inline" in sp, (
+                f"Agent {name}: system_prompt must have 'file' or 'inline'"
+            )
 
-    def test_load_without_validation(self, tmp_path):
-        """Test loading config without validation."""
-        yaml_file = tmp_path / "agents.yaml"
-        yaml_file.write_text("version: '1.0'\nagents: {}")
+    def test_agent_output_schema_has_ref_or_example(self):
+        config = load_agents_config()
+        for name, agent in config["agents"].items():
+            os_ = agent.get("output_schema")
+            if os_ is not None:
+                assert "ref" in os_ or "example" in os_, (
+                    f"Agent {name}: output_schema must have 'ref' or 'example'"
+                )
 
-        # Should not raise even with missing agents
-        config = load_yaml(yaml_file)
-        assert config["version"] == "1.0"
+    def test_no_old_v10_fields_present(self):
+        """v1.0 fields must be absent from agents."""
+        config = load_agents_config()
+        for name, agent in config["agents"].items():
+            assert "type" not in agent,           f"Agent {name} has old 'type' field"
+            assert "prompt_file" not in agent,    f"Agent {name} has old 'prompt_file' field"
+            assert "validates_phase" not in agent, f"Agent {name} has old 'validates_phase'"
+            assert "validation_rules" not in agent, f"Agent {name} has old 'validation_rules'"
+            assert "llm" not in agent,            f"Agent {name} has old nested 'llm' block"
+
+
+# ---------------------------------------------------------------------------
+# TestValidateAgentsConfig
+# ---------------------------------------------------------------------------
 
 
 class TestValidateAgentsConfig:
-    """Tests for agents configuration validation."""
-
     def test_valid_config_passes(self):
-        """Test that valid config passes validation."""
-        config = {
-            "version": "1.0",
-            "agents": {
-                "extractor": {"name": "extractor", "type": "extractor", "prompt_file": "extractor.md"},
-                "critic_1": {
-                    "name": "critic_1",
-                    "type": "critic",
-                    "prompt_file": "critic_1.md",
-                    "validates_phase": "extraction",
-                },
-                "reconciler": {"name": "reconciler", "type": "reconciler", "prompt_file": "reconciler.md"},
-                "critic_2": {
-                    "name": "critic_2",
-                    "type": "critic",
-                    "prompt_file": "critic_2.md",
-                    "validates_phase": "reconciliation",
-                },
-                "classifier": {"name": "classifier", "type": "classifier", "prompt_file": "classifier.md"},
-                "critic_3": {
-                    "name": "critic_3",
-                    "type": "critic",
-                    "prompt_file": "critic_3.md",
-                    "validates_phase": "classification",
-                },
-                "formatter": {"name": "formatter", "type": "formatter", "prompt_file": "formatter.md"},
-            },
-        }
-
-        # Should not raise
-        validate_agents_config(config)
+        validate_agents_config(_minimal_agents_config())  # should not raise
 
     def test_missing_required_agent_fails(self):
-        """Test that missing required agent fails validation."""
-        config = {
-            "version": "1.0",
-            "agents": {
-                "extractor": {"name": "extractor", "type": "extractor", "prompt_file": "extractor.md"},
-                # Missing other required agents
-            },
-        }
-
-        with pytest.raises(ConfigValidationError) as exc_info:
+        config = _minimal_agents_config()
+        del config["agents"]["critic_1"]
+        with pytest.raises(ConfigValidationError) as exc:
             validate_agents_config(config)
+        assert any("critic_1" in str(e) for e in exc.value.errors)
 
-        assert "critic_1" in str(exc_info.value.errors)
-
-    def test_invalid_critic_phase_fails(self):
-        """Test that invalid critic phase fails validation."""
-        config = {
-            "version": "1.0",
-            "agents": {
-                "extractor": {"name": "extractor", "type": "extractor", "prompt_file": "extractor.md"},
-                "critic_1": {
-                    "name": "critic_1",
-                    "type": "critic",
-                    "prompt_file": "critic_1.md",
-                    "validates_phase": "invalid_phase",  # Invalid
-                },
-                "reconciler": {"name": "reconciler", "type": "reconciler", "prompt_file": "reconciler.md"},
-                "critic_2": {
-                    "name": "critic_2",
-                    "type": "critic",
-                    "prompt_file": "critic_2.md",
-                    "validates_phase": "reconciliation",
-                },
-                "classifier": {"name": "classifier", "type": "classifier", "prompt_file": "classifier.md"},
-                "critic_3": {
-                    "name": "critic_3",
-                    "type": "critic",
-                    "prompt_file": "critic_3.md",
-                    "validates_phase": "classification",
-                },
-                "formatter": {"name": "formatter", "type": "formatter", "prompt_file": "formatter.md"},
-            },
-        }
-
-        with pytest.raises(ConfigValidationError) as exc_info:
+    def test_missing_system_prompt_fails(self):
+        config = _minimal_agents_config()
+        del config["agents"]["extractor"]["system_prompt"]
+        with pytest.raises(ConfigValidationError) as exc:
             validate_agents_config(config)
+        assert any("system_prompt" in str(e) for e in exc.value.errors)
 
-        assert "invalid_phase" in str(exc_info.value.errors)
+    def test_invalid_output_schema_fails(self):
+        config = _minimal_agents_config()
+        config["agents"]["extractor"]["output_schema"] = {"invalid_key": "something"}
+        with pytest.raises(ConfigValidationError) as exc:
+            validate_agents_config(config)
+        assert any("output_schema" in str(e) for e in exc.value.errors)
+
+
+# ---------------------------------------------------------------------------
+# TestLoadWorkflowsConfig — bundled workflows.yaml
+# ---------------------------------------------------------------------------
 
 
 class TestLoadWorkflowsConfig:
-    """Tests for workflows configuration loading."""
-
     def test_load_bundled_workflows_config(self):
-        """Test loading the bundled workflows.yaml."""
         config = load_workflows_config()
-
         assert config is not None
         assert "version" in config
-        assert "workflows" in config
 
-    def test_bundled_config_has_kyc_workflow(self):
-        """Test that bundled config has the KYC workflow."""
+    def test_bundled_config_version(self):
         config = load_workflows_config()
+        assert config["version"] == "1.2"
 
-        assert "kyc_document_processing" in config["workflows"]
-
-    def test_workflow_has_required_fields(self):
-        """Test that workflow has required fields."""
+    def test_bundled_config_has_workflow_block(self):
         config = load_workflows_config()
-        workflow = config["workflows"]["kyc_document_processing"]
+        assert "workflow" in config
+        assert config["workflow"]["id"] == "kyc_document_processing"
 
-        assert "initial_state" in workflow
-        assert "terminal_states" in workflow
-        assert "transitions" in workflow
-
-    def test_workflow_transitions_exist(self):
-        """Test that all expected transitions exist."""
+    def test_bundled_config_has_nodes(self):
         config = load_workflows_config()
-        transitions = config["workflows"]["kyc_document_processing"]["transitions"]
-
-        expected_agents = [
-            "extractor",
-            "critic_1",
-            "reconciler",
-            "critic_2",
-            "classifier",
-            "critic_3",
-            "formatter",
+        assert "nodes" in config
+        expected_nodes = [
+            "extractor", "critic_1", "reconciler",
+            "critic_2", "classifier", "critic_3", "formatter", "end",
         ]
+        for node in expected_nodes:
+            assert node in config["nodes"], f"Missing node: {node}"
 
-        for agent in expected_agents:
-            assert agent in transitions, f"Missing transition for {agent}"
+    def test_bundled_config_has_edges(self):
+        config = load_workflows_config()
+        assert "edges" in config
+        assert len(config["edges"]) > 0
+
+    def test_no_old_v10_fields_present(self):
+        config = load_workflows_config()
+        assert "workflows" not in config,   "Old 'workflows' map present"
+        assert "transitions" not in config, "Old 'transitions' block present"
+        assert "events" not in config,      "Old 'events' block present"
+
+
+# ---------------------------------------------------------------------------
+# TestValidateWorkflowsConfig
+# ---------------------------------------------------------------------------
 
 
 class TestValidateWorkflowsConfig:
-    """Tests for workflows configuration validation."""
-
     def test_valid_config_passes(self):
-        """Test that valid config passes validation."""
-        agents_config = {
-            "agents": {
-                "extractor": {},
-                "critic_1": {},
-            }
-        }
-        workflows_config = {
-            "workflows": {
-                "test_workflow": {
-                    "initial_state": "extractor",
-                    "terminal_states": ["COMPLETED", "FAILED"],
-                    "transitions": {
-                        "extractor": {"on_complete": "critic_1"},
-                        "critic_1": {"on_pass": "COMPLETED", "on_fail_max": "FAILED"},
-                    },
-                }
-            }
-        }
+        wf = _minimal_workflows_config()
+        ag = _minimal_agents_config()
+        validate_workflows_config(wf, ag)  # should not raise
 
-        # Should not raise
-        validate_workflows_config(workflows_config, agents_config)
+    def test_unknown_agent_in_node_fails(self):
+        wf = _minimal_workflows_config()
+        wf["nodes"]["bad_node"] = {"type": "agent", "agent": "nonexistent"}
+        ag = _minimal_agents_config()
+        with pytest.raises(ConfigValidationError) as exc:
+            validate_workflows_config(wf, ag)
+        assert any("nonexistent" in str(e) for e in exc.value.errors)
 
-    def test_unknown_agent_in_transitions_fails(self):
-        """Test that unknown agent in transitions fails."""
-        agents_config = {"agents": {"extractor": {}}}
-        workflows_config = {
-            "workflows": {
-                "test_workflow": {
-                    "initial_state": "extractor",
-                    "terminal_states": ["COMPLETED"],
-                    "transitions": {
-                        "unknown_agent": {"on_complete": "COMPLETED"},
-                    },
-                }
-            }
-        }
+    def test_unknown_edge_target_fails(self):
+        wf = _minimal_workflows_config()
+        wf["edges"].append({"from": "extractor", "to": "ghost_node"})
+        ag = _minimal_agents_config()
+        with pytest.raises(ConfigValidationError) as exc:
+            validate_workflows_config(wf, ag)
+        assert any("ghost_node" in str(e) for e in exc.value.errors)
 
-        with pytest.raises(ConfigValidationError) as exc_info:
-            validate_workflows_config(workflows_config, agents_config)
+    def test_unknown_condition_route_target_fails(self):
+        wf = _minimal_workflows_config()
+        wf["edges"].append({
+            "from": "extractor",
+            "condition": {
+                "fn": "src.core.conditions.route_critic_1",
+                "routes": {"pass": "ghost_node"},
+            },
+        })
+        ag = _minimal_agents_config()
+        with pytest.raises(ConfigValidationError) as exc:
+            validate_workflows_config(wf, ag)
+        assert any("ghost_node" in str(e) for e in exc.value.errors)
 
-        assert "unknown_agent" in str(exc_info.value.errors)
 
-    def test_unknown_transition_target_fails(self):
-        """Test that unknown transition target fails."""
-        agents_config = {"agents": {"extractor": {}}}
-        workflows_config = {
-            "workflows": {
-                "test_workflow": {
-                    "initial_state": "extractor",
-                    "terminal_states": ["COMPLETED"],
-                    "transitions": {
-                        "extractor": {"on_complete": "unknown_target"},
-                    },
-                }
-            }
-        }
-
-        with pytest.raises(ConfigValidationError) as exc_info:
-            validate_workflows_config(workflows_config, agents_config)
-
-        assert "unknown_target" in str(exc_info.value.errors)
-
-    def test_unknown_initial_state_fails(self):
-        """Test that unknown initial state fails."""
-        agents_config = {"agents": {"extractor": {}}}
-        workflows_config = {
-            "workflows": {
-                "test_workflow": {
-                    "initial_state": "unknown_agent",
-                    "terminal_states": ["COMPLETED"],
-                    "transitions": {},
-                }
-            }
-        }
-
-        with pytest.raises(ConfigValidationError) as exc_info:
-            validate_workflows_config(workflows_config, agents_config)
-
-        assert "unknown_agent" in str(exc_info.value.errors)
+# ---------------------------------------------------------------------------
+# TestLoadAllConfigs
+# ---------------------------------------------------------------------------
 
 
 class TestLoadAllConfigs:
-    """Tests for loading all configurations."""
-
     def test_load_all_configs(self):
-        """Test loading all configs at once."""
         configs = load_all_configs()
-
         assert "agents" in configs
         assert "workflows" in configs
         assert configs["agents"]["agents"] is not None
-        assert configs["workflows"]["workflows"] is not None
+        assert configs["workflows"]["nodes"] is not None
+
+
+# ---------------------------------------------------------------------------
+# TestGetAgentConfig
+# ---------------------------------------------------------------------------
 
 
 class TestGetAgentConfig:
-    """Tests for getting individual agent configurations."""
-
     def test_get_existing_agent(self):
-        """Test getting an existing agent's config."""
         config = get_agent_config("extractor")
-
-        assert config["name"] == "extractor"
-        assert config["type"] == "extractor"
+        assert "role" in config
+        assert "goal" in config
+        assert "input_keys" in config
 
     def test_get_nonexistent_agent_raises(self):
-        """Test that getting non-existent agent raises error."""
         with pytest.raises(ConfigError, match="not found"):
             get_agent_config("nonexistent_agent")
 
-    def test_get_critic_agent(self):
-        """Test getting a critic agent's config."""
-        config = get_agent_config("critic_1")
 
-        assert config["type"] == "critic"
-        assert config["validates_phase"] == "extraction"
+# ---------------------------------------------------------------------------
+# TestGetEffectiveAgentConfig
+# ---------------------------------------------------------------------------
+
+
+class TestGetEffectiveAgentConfig:
+    def test_defaults_merged_into_agent(self):
+        agents_config = {
+            "version": "1.2",
+            "defaults": {"model": "openai/gpt-4o-mini", "temperature": 0},
+            "agents": {
+                "extractor": {
+                    "role": "R", "goal": "G", "backstory": "B",
+                    "input_keys": ["documents"], "output_key": "extracted_persons",
+                    "system_prompt": {"inline": "test prompt"},
+                },
+            },
+        }
+        result = get_effective_agent_config("extractor", agents_config)
+        assert result["model"] == "openai/gpt-4o-mini"
+        assert result["temperature"] == 0
+        assert result["role"] == "R"
+
+    def test_agent_overrides_default(self):
+        agents_config = {
+            "version": "1.2",
+            "defaults": {"model": "openai/gpt-4o-mini", "temperature": 0},
+            "agents": {
+                "extractor": {
+                    "role": "R", "goal": "G", "backstory": "B",
+                    "model": "openai/gpt-4o",  # override
+                    "input_keys": ["documents"], "output_key": "extracted_persons",
+                    "system_prompt": {"inline": "test prompt"},
+                },
+            },
+        }
+        result = get_effective_agent_config("extractor", agents_config)
+        assert result["model"] == "openai/gpt-4o"
+
+    def test_retry_blocks_merged(self):
+        agents_config = {
+            "version": "1.2",
+            "defaults": {"retry": {"max_attempts": 4, "backoff": "exponential"}},
+            "agents": {
+                "extractor": {
+                    "role": "R", "goal": "G", "backstory": "B",
+                    "input_keys": ["documents"], "output_key": "out",
+                    "system_prompt": {"inline": "p"},
+                    "retry": {"delay_seconds": 2},  # partial override
+                },
+            },
+        }
+        result = get_effective_agent_config("extractor", agents_config)
+        assert result["retry"]["max_attempts"] == 4
+        assert result["retry"]["delay_seconds"] == 2
+
+
+# ---------------------------------------------------------------------------
+# TestGetWorkflowConfig
+# ---------------------------------------------------------------------------
 
 
 class TestGetWorkflowConfig:
-    """Tests for getting workflow configurations."""
-
-    def test_get_default_workflow(self):
-        """Test getting the default workflow config."""
+    def test_get_workflow_config(self):
         config = get_workflow_config()
-
         assert config is not None
-        assert "transitions" in config
+        assert config["id"] == "kyc_document_processing"
+        assert config["entry_point"] == "__start__"
 
-    def test_get_named_workflow(self):
-        """Test getting a named workflow config."""
-        config = get_workflow_config("kyc_document_processing")
-
-        assert config is not None
-        assert config["initial_state"] == "extractor"
-
-    def test_get_nonexistent_workflow_raises(self):
-        """Test that getting non-existent workflow raises error."""
-        with pytest.raises(ConfigError, match="not found"):
-            get_workflow_config("nonexistent_workflow")
+    def test_missing_workflow_block_raises(self):
+        with pytest.raises(ConfigError, match="workflow"):
+            get_workflow_config(config={})
 
 
-class TestGetTransition:
-    """Tests for getting workflow transitions."""
+# ---------------------------------------------------------------------------
+# TestGetEdgeRoutes
+# ---------------------------------------------------------------------------
 
-    def test_get_extractor_transition(self):
-        """Test getting transition from extractor."""
-        next_agent = get_transition("extractor")
 
-        assert next_agent == "critic_1"
+class TestGetEdgeRoutes:
+    def test_get_critic_1_routes(self):
+        routes = get_edge_routes("critic_1")
+        assert routes is not None
+        assert "pass" in routes
+        assert "fail_retry" in routes
+        assert "fail_max" in routes
+        assert routes["pass"] == "reconciler"
+        assert routes["fail_retry"] == "extractor"
 
-    def test_get_critic_pass_transition(self):
-        """Test getting critic pass transition."""
-        next_agent = get_transition("critic_1", decision="pass")
+    def test_get_critic_2_routes(self):
+        routes = get_edge_routes("critic_2")
+        assert routes["pass"] == "classifier"
+        assert routes["fail_retry"] == "reconciler"
 
-        assert next_agent == "reconciler"
+    def test_get_critic_3_routes(self):
+        routes = get_edge_routes("critic_3")
+        assert routes["pass"] == "formatter"
+        assert routes["fail_retry"] == "classifier"
 
-    def test_get_critic_fail_retry_transition(self):
-        """Test getting critic fail_retry transition."""
-        next_agent = get_transition("critic_1", decision="fail_retry")
+    def test_no_conditional_edge_returns_none(self):
+        result = get_edge_routes("extractor")
+        assert result is None
 
-        assert next_agent == "extractor"
+    def test_unknown_node_returns_none(self):
+        result = get_edge_routes("nonexistent_node")
+        assert result is None
 
-    def test_get_critic_fail_max_transition(self):
-        """Test getting critic fail_max transition."""
-        next_agent = get_transition("critic_1", decision="fail_max")
 
-        assert next_agent == "FAILED"
+# ---------------------------------------------------------------------------
+# TestGetUnconditionalTarget
+# ---------------------------------------------------------------------------
 
-    def test_get_formatter_transition(self):
-        """Test getting formatter transition."""
-        next_agent = get_transition("formatter")
 
-        assert next_agent == "COMPLETED"
+class TestGetUnconditionalTarget:
+    def test_extractor_goes_to_critic_1(self):
+        assert get_unconditional_target("extractor") == "critic_1"
 
-    def test_get_invalid_agent_returns_none(self):
-        """Test that invalid agent returns None."""
-        next_agent = get_transition("nonexistent")
+    def test_reconciler_goes_to_critic_2(self):
+        assert get_unconditional_target("reconciler") == "critic_2"
 
-        assert next_agent is None
+    def test_classifier_goes_to_critic_3(self):
+        assert get_unconditional_target("classifier") == "critic_3"
+
+    def test_formatter_goes_to_end(self):
+        assert get_unconditional_target("formatter") == "end"
+
+    def test_unknown_node_returns_none(self):
+        assert get_unconditional_target("nonexistent") is None
+
+
+# ---------------------------------------------------------------------------
+# TestResolveCallable
+# ---------------------------------------------------------------------------
+
+
+class TestResolveCallable:
+    def test_resolve_valid_callable(self):
+        fn = resolve_callable("src.core.conditions.route_critic_1")
+        assert callable(fn)
+
+    def test_resolve_all_critic_routes(self):
+        for name in ("route_critic_1", "route_critic_2", "route_critic_3"):
+            fn = resolve_callable(f"src.core.conditions.{name}")
+            assert callable(fn)
+
+    def test_resolve_invalid_module_raises(self):
+        with pytest.raises(ConfigError, match="Cannot import"):
+            resolve_callable("nonexistent.module.fn")
+
+    def test_resolve_invalid_attribute_raises(self):
+        with pytest.raises(ConfigError, match="no attribute"):
+            resolve_callable("src.core.conditions.nonexistent_fn")
+
+    def test_resolve_bad_path_format_raises(self):
+        with pytest.raises(ConfigError, match="Invalid callable"):
+            resolve_callable("no_dots_here")
+
+
+# ---------------------------------------------------------------------------
+# TestConfigIntegration
+# ---------------------------------------------------------------------------
 
 
 class TestConfigIntegration:
-    """Integration tests for configuration loading."""
-
-    def test_full_workflow_path_extraction_to_completion(self):
-        """Test that a complete workflow path can be traced."""
-        # Simulate successful workflow path
+    def test_full_workflow_path_via_edges(self):
+        """Trace the happy path through edges using get_edge_routes / get_unconditional_target."""
         path = []
         current = "extractor"
 
-        while current not in ("COMPLETED", "FAILED", None):
+        while current not in ("end", None):
             path.append(current)
-            if current.startswith("critic"):
-                current = get_transition(current, decision="pass")
+            if current.startswith("critic_"):
+                routes = get_edge_routes(current)
+                current = routes["pass"] if routes else None
             else:
-                current = get_transition(current)
+                current = get_unconditional_target(current)
 
         path.append(current)
 
-        expected_path = [
-            "extractor",
-            "critic_1",
-            "reconciler",
-            "critic_2",
-            "classifier",
-            "critic_3",
-            "formatter",
-            "COMPLETED",
+        assert path == [
+            "extractor", "critic_1",
+            "reconciler", "critic_2",
+            "classifier", "critic_3",
+            "formatter", "end",
         ]
 
-        assert path == expected_path
-
-    def test_retry_loop_path(self):
-        """Test that retry loops work correctly."""
-        # Simulate extraction failing and retrying
-        current = "extractor"
-        current = get_transition(current)  # -> critic_1
+    def test_retry_loop_via_edges(self):
+        """Trace extraction retry path via edge routes."""
+        current = get_unconditional_target("extractor")   # → critic_1
         assert current == "critic_1"
 
-        current = get_transition(current, decision="fail_retry")  # -> extractor
+        routes = get_edge_routes("critic_1")
+        current = routes["fail_retry"]                    # → extractor
         assert current == "extractor"
 
-        current = get_transition(current)  # -> critic_1
+        current = get_unconditional_target(current)       # → critic_1
         assert current == "critic_1"
 
-    def test_max_retry_failure_path(self):
-        """Test that max retry leads to failure."""
-        current = "critic_1"
-        current = get_transition(current, decision="fail_max")
-
-        assert current == "FAILED"
+    def test_fail_max_path(self):
+        """fail_max routes to end."""
+        routes = get_edge_routes("critic_1")
+        assert routes["fail_max"] == "end"

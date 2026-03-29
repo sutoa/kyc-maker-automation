@@ -257,7 +257,8 @@ class TestBuildWorkflowGraph:
             "critic_3": mock_critic_pass,
         }
 
-        with pytest.raises(ValueError, match="Missing required agent"):
+        # YAML-driven builder raises when a node references a missing function
+        with pytest.raises(ValueError, match="no matching function was provided"):
             build_workflow_graph(agent_functions, critic_functions)
 
     def test_build_graph_missing_critic_raises(self):
@@ -273,7 +274,8 @@ class TestBuildWorkflowGraph:
             # Missing: critic_2, critic_3
         }
 
-        with pytest.raises(ValueError, match="Missing required critic"):
+        # YAML-driven builder raises when a critic node references a missing function
+        with pytest.raises(ValueError, match="no matching function was provided"):
             build_workflow_graph(agent_functions, critic_functions)
 
 

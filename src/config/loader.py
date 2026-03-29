@@ -1,17 +1,18 @@
-"""Configuration loader with schema validation.
+"""Configuration loader for AGENTFLOW v1.2 YAML specification.
 
-This module provides functions to load and validate:
-- Agent configurations from agents.yaml
-- Workflow configurations from workflows.yaml
+Loads and validates:
+- agents.yaml  — agent library (role, goal, backstory, input_keys, output_key, …)
+- workflows.yaml — workflow topology (nodes, edges, state schema, runtime, …)
 
-Validation uses JSON Schema for structural validation and
-additional semantic validation for workflow consistency.
+Validation uses JSON Schema for structural checks plus semantic
+cross-validation (e.g. every node references a known agent key).
 """
 
+import importlib
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
 
@@ -38,6 +39,12 @@ _SCHEMA_DIR = _CONFIG_DIR / "schemas"
 _AGENTS_FILE = _CONFIG_DIR / "agents.yaml"
 _WORKFLOWS_FILE = _CONFIG_DIR / "workflows.yaml"
 _AGENT_SCHEMA_FILE = _SCHEMA_DIR / "agent.schema.json"
+_WORKFLOW_SCHEMA_FILE = _SCHEMA_DIR / "workflow.schema.json"
+
+
+# ---------------------------------------------------------------------------
+# Low-level I/O helpers
+# ---------------------------------------------------------------------------
 
 
 def load_yaml(file_path: Path) -> dict[str, Any]:
@@ -119,13 +126,18 @@ def validate_against_schema(
         )
 
 
-def validate_agents_config(config: dict[str, Any]) -> None:
-    """Validate agents configuration semantically.
+# ---------------------------------------------------------------------------
+# Agents config
+# ---------------------------------------------------------------------------
 
-    Performs checks beyond JSON schema validation:
-    - All agents have unique names
-    - Required agents are present
-    - Critic agents reference valid phases
+
+def validate_agents_config(config: dict[str, Any]) -> None:
+    """Validate agents configuration semantically (v1.2).
+
+    Checks beyond JSON schema:
+    - All required KYC agents are present
+    - Each agent has exactly one of system_prompt.file or system_prompt.inline
+    - Each agent has exactly one of output_schema.ref or output_schema.example
 
     Args:
         config: Agents configuration dictionary.
@@ -136,7 +148,6 @@ def validate_agents_config(config: dict[str, Any]) -> None:
     errors = []
     agents = config.get("agents", {})
 
-    # Check required agents exist
     required_agents = [
         "extractor",
         "critic_1",
@@ -148,22 +159,29 @@ def validate_agents_config(config: dict[str, Any]) -> None:
     ]
     for agent_name in required_agents:
         if agent_name not in agents:
-            errors.append(
-                {"path": f"agents.{agent_name}", "message": f"Required agent '{agent_name}' is missing"}
-            )
+            errors.append({
+                "path": f"agents.{agent_name}",
+                "message": f"Required agent '{agent_name}' is missing",
+            })
 
-    # Check critic agents have valid validates_phase
-    valid_phases = {"extraction", "reconciliation", "classification"}
     for name, agent in agents.items():
-        if agent.get("type") == "critic":
-            phase = agent.get("validates_phase")
-            if phase and phase not in valid_phases:
-                errors.append(
-                    {
-                        "path": f"agents.{name}.validates_phase",
-                        "message": f"Invalid phase '{phase}'. Must be one of: {valid_phases}",
-                    }
-                )
+        # system_prompt must have file or inline (JSON schema enforces oneOf,
+        # but validate here for clearer error messages too)
+        sp = agent.get("system_prompt", {})
+        if not isinstance(sp, dict) or ("file" not in sp and "inline" not in sp):
+            errors.append({
+                "path": f"agents.{name}.system_prompt",
+                "message": "Must have exactly one of 'file' or 'inline'",
+            })
+
+        # output_schema, if present, must have ref or example
+        os_ = agent.get("output_schema")
+        if os_ is not None:
+            if not isinstance(os_, dict) or ("ref" not in os_ and "example" not in os_):
+                errors.append({
+                    "path": f"agents.{name}.output_schema",
+                    "message": "Must have exactly one of 'ref' or 'example'",
+                })
 
     if errors:
         raise ConfigValidationError(
@@ -172,71 +190,11 @@ def validate_agents_config(config: dict[str, Any]) -> None:
         )
 
 
-def validate_workflows_config(config: dict[str, Any], agents_config: dict[str, Any]) -> None:
-    """Validate workflows configuration semantically.
-
-    Performs checks beyond JSON schema validation:
-    - All referenced agents exist in agents config
-    - Workflow transitions form valid graph
-    - Terminal states are reachable
-
-    Args:
-        config: Workflows configuration dictionary.
-        agents_config: Agents configuration dictionary.
-
-    Raises:
-        ConfigValidationError: If semantic validation fails.
-    """
-    errors = []
-    agents = agents_config.get("agents", {})
-
-    for workflow_name, workflow in config.get("workflows", {}).items():
-        transitions = workflow.get("transitions", {})
-        terminal_states = set(workflow.get("terminal_states", []))
-
-        # Check all transition sources are valid agents or terminal states
-        for source, transition in transitions.items():
-            if source not in agents and source not in terminal_states:
-                errors.append(
-                    {
-                        "path": f"workflows.{workflow_name}.transitions.{source}",
-                        "message": f"Unknown agent '{source}' in transitions",
-                    }
-                )
-
-            # Check transition targets
-            for key in ["on_complete", "on_pass", "on_fail_retry", "on_fail_max"]:
-                target = transition.get(key)
-                if target and target not in agents and target not in terminal_states:
-                    errors.append(
-                        {
-                            "path": f"workflows.{workflow_name}.transitions.{source}.{key}",
-                            "message": f"Unknown target '{target}'",
-                        }
-                    )
-
-        # Check initial state is valid
-        initial_state = workflow.get("initial_state")
-        if initial_state and initial_state not in agents:
-            errors.append(
-                {
-                    "path": f"workflows.{workflow_name}.initial_state",
-                    "message": f"Unknown initial state '{initial_state}'",
-                }
-            )
-
-    if errors:
-        raise ConfigValidationError(
-            f"Workflows config semantic validation failed: {len(errors)} error(s)",
-            errors=errors,
-        )
-
-
 def load_agents_config(
     file_path: Path | None = None,
     validate: bool = True,
 ) -> dict[str, Any]:
-    """Load and validate agents configuration.
+    """Load and validate agents configuration (v1.2).
 
     Args:
         file_path: Path to agents.yaml (default: bundled config).
@@ -253,18 +211,100 @@ def load_agents_config(
     config = load_yaml(file_path)
 
     if validate:
-        # Schema validation (if jsonschema available)
         try:
             schema = load_json_schema(_AGENT_SCHEMA_FILE)
             validate_against_schema(config, schema, "agents")
         except ConfigError as e:
             logger.warning(f"Schema validation skipped: {e}")
 
-        # Semantic validation
         validate_agents_config(config)
 
     logger.info(f"Loaded agents config with {len(config.get('agents', {}))} agents")
     return config
+
+
+# ---------------------------------------------------------------------------
+# Workflows config
+# ---------------------------------------------------------------------------
+
+
+def validate_workflows_config(
+    config: dict[str, Any],
+    agents_config: dict[str, Any],
+) -> None:
+    """Validate workflows configuration semantically (v1.2).
+
+    Checks beyond JSON schema:
+    - workflow.entry_point resolves to a node in nodes
+    - Every agent-type node references a key that exists in agents_config
+    - Every edge target (to / condition.routes values) resolves to a valid node
+
+    Args:
+        config: Workflows configuration dictionary.
+        agents_config: Agents configuration for cross-validation.
+
+    Raises:
+        ConfigValidationError: If semantic validation fails.
+    """
+    errors = []
+    agents = agents_config.get("agents", {})
+    nodes = config.get("nodes", {})
+    edges = config.get("edges", [])
+    workflow_meta = config.get("workflow", {})
+    entry_point = workflow_meta.get("entry_point", "")
+
+    valid_node_names = set(nodes.keys()) | {"__start__"}
+
+    # entry_point must exist in nodes (or be __start__ which is a sentinel)
+    if entry_point != "__start__" and entry_point not in nodes:
+        errors.append({
+            "path": "workflow.entry_point",
+            "message": f"Entry point '{entry_point}' not found in nodes",
+        })
+
+    # Every agent-type node must reference a known agent
+    for node_name, node_def in nodes.items():
+        if node_def.get("type") == "agent":
+            agent_key = node_def.get("agent")
+            if agent_key and agent_key not in agents:
+                errors.append({
+                    "path": f"nodes.{node_name}.agent",
+                    "message": f"Agent '{agent_key}' not found in agents config",
+                })
+
+    # Every edge target must resolve to a valid node
+    for i, edge in enumerate(edges):
+        from_node = edge.get("from", "")
+        if from_node not in valid_node_names:
+            errors.append({
+                "path": f"edges[{i}].from",
+                "message": f"Unknown source node '{from_node}'",
+            })
+
+        if "to" in edge:
+            to_node = edge["to"]
+            if to_node not in nodes:
+                errors.append({
+                    "path": f"edges[{i}].to",
+                    "message": f"Unknown target node '{to_node}'",
+                })
+
+        if "condition" in edge:
+            routes = edge["condition"].get("routes", {})
+            for route_key, target in routes.items():
+                if route_key == "default":
+                    continue
+                if target not in nodes:
+                    errors.append({
+                        "path": f"edges[{i}].condition.routes.{route_key}",
+                        "message": f"Unknown target node '{target}'",
+                    })
+
+    if errors:
+        raise ConfigValidationError(
+            f"Workflows config semantic validation failed: {len(errors)} error(s)",
+            errors=errors,
+        )
 
 
 def load_workflows_config(
@@ -272,7 +312,7 @@ def load_workflows_config(
     agents_config: dict[str, Any] | None = None,
     validate: bool = True,
 ) -> dict[str, Any]:
-    """Load and validate workflows configuration.
+    """Load and validate workflows configuration (v1.2).
 
     Args:
         file_path: Path to workflows.yaml (default: bundled config).
@@ -290,16 +330,30 @@ def load_workflows_config(
     config = load_yaml(file_path)
 
     if validate:
-        # Load agents config if not provided
+        try:
+            schema = load_json_schema(_WORKFLOW_SCHEMA_FILE)
+            validate_against_schema(config, schema, "workflow")
+        except ConfigError as e:
+            logger.warning(f"Schema validation skipped: {e}")
+
         if agents_config is None:
             agents_config = load_agents_config(validate=False)
 
-        # Semantic validation
         validate_workflows_config(config, agents_config)
 
-    workflows = config.get("workflows", {})
-    logger.info(f"Loaded workflows config with {len(workflows)} workflow(s)")
+    workflow_id = config.get("workflow", {}).get("id", "unknown")
+    node_count = len(config.get("nodes", {}))
+    edge_count = len(config.get("edges", []))
+    logger.info(
+        f"Loaded workflow '{workflow_id}' "
+        f"({node_count} nodes, {edge_count} edges)"
+    )
     return config
+
+
+# ---------------------------------------------------------------------------
+# Combined loader
+# ---------------------------------------------------------------------------
 
 
 def load_all_configs(validate: bool = True) -> dict[str, dict[str, Any]]:
@@ -320,15 +374,25 @@ def load_all_configs(validate: bool = True) -> dict[str, dict[str, Any]]:
         agents_config=agents_config,
         validate=validate,
     )
-
     return {
         "agents": agents_config,
         "workflows": workflows_config,
     }
 
 
-def get_agent_config(agent_name: str, config: dict[str, Any] | None = None) -> dict[str, Any]:
+# ---------------------------------------------------------------------------
+# Accessor helpers
+# ---------------------------------------------------------------------------
+
+
+def get_agent_config(
+    agent_name: str,
+    config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Get configuration for a specific agent.
+
+    Returns the raw per-agent dict. Use get_effective_agent_config()
+    if you need defaults merged in.
 
     Args:
         agent_name: Name of the agent.
@@ -350,62 +414,147 @@ def get_agent_config(agent_name: str, config: dict[str, Any] | None = None) -> d
     return agents[agent_name]
 
 
-def get_workflow_config(
-    workflow_name: str = "kyc_document_processing",
+def get_effective_agent_config(
+    agent_name: str,
     config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Get configuration for a specific workflow.
+    """Get resolved agent config with defaults merged in.
+
+    Merge order (later overrides earlier):
+      agents.yaml defaults → per-agent fields
 
     Args:
-        workflow_name: Name of the workflow.
+        agent_name: Name of the agent.
+        config: Agents config (loaded if not provided).
+
+    Returns:
+        Merged agent configuration dictionary.
+
+    Raises:
+        ConfigError: If agent not found.
+    """
+    if config is None:
+        config = load_agents_config()
+
+    agent = get_agent_config(agent_name, config)
+    defaults = config.get("defaults", {})
+
+    # Start from defaults, overlay per-agent fields
+    merged = {**defaults, **agent}
+
+    # Merge nested retry block if both levels define it
+    if "retry" in defaults and "retry" in agent:
+        merged["retry"] = {**defaults["retry"], **agent["retry"]}
+
+    return merged
+
+
+def get_workflow_config(
+    config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Get the workflow metadata block.
+
+    In v1.2 there is a single workflow per file (no named map).
+
+    Args:
         config: Workflows config (loaded if not provided).
 
     Returns:
-        Workflow configuration dictionary.
+        The workflow: block as a dictionary.
 
     Raises:
-        ConfigError: If workflow not found.
+        ConfigError: If workflow block not found.
     """
     if config is None:
         config = load_workflows_config()
 
-    workflows = config.get("workflows", {})
-    if workflow_name not in workflows:
-        raise ConfigError(f"Workflow '{workflow_name}' not found in configuration")
+    workflow = config.get("workflow")
+    if not workflow:
+        raise ConfigError("'workflow' block not found in workflows config")
 
-    return workflows[workflow_name]
+    return workflow
 
 
-def get_transition(
-    agent_name: str,
-    decision: str | None = None,
-    workflow_config: dict[str, Any] | None = None,
-) -> str | None:
-    """Get the next agent based on current agent and decision.
+def get_edge_routes(
+    from_node: str,
+    config: dict[str, Any] | None = None,
+) -> dict[str, str] | None:
+    """Get the condition routes for a conditional edge.
+
+    Scans the edges list for the first edge with the given from_node
+    that has a condition block, and returns its routes dict.
 
     Args:
-        agent_name: Current agent name.
-        decision: Critic decision ('pass', 'fail_retry', 'fail_max') or None for non-critic.
-        workflow_config: Workflow config (loaded if not provided).
+        from_node: Source node name (e.g. "critic_1").
+        config: Workflows config (loaded if not provided).
 
     Returns:
-        Name of next agent or terminal state, or None if not found.
+        Routes dict mapping decision strings to node names,
+        or None if no conditional edge exists for this node.
+
+    Example:
+        get_edge_routes("critic_1")
+        → {"pass": "reconciler", "fail_retry": "extractor", "fail_max": "end"}
     """
-    if workflow_config is None:
-        workflow_config = get_workflow_config()
+    if config is None:
+        config = load_workflows_config()
 
-    transitions = workflow_config.get("transitions", {})
-    agent_transitions = transitions.get(agent_name, {})
+    for edge in config.get("edges", []):
+        if edge.get("from") == from_node and "condition" in edge:
+            return edge["condition"].get("routes")
 
-    if decision is None:
-        # Non-critic agents use on_complete
-        return agent_transitions.get("on_complete")
-    else:
-        # Map decision to transition key
-        key_map = {
-            "pass": "on_pass",
-            "fail_retry": "on_fail_retry",
-            "fail_max": "on_fail_max",
-        }
-        key = key_map.get(decision)
-        return agent_transitions.get(key) if key else None
+    return None
+
+
+def get_unconditional_target(
+    from_node: str,
+    config: dict[str, Any] | None = None,
+) -> str | None:
+    """Get the target node for an unconditional edge.
+
+    Args:
+        from_node: Source node name (e.g. "extractor").
+        config: Workflows config (loaded if not provided).
+
+    Returns:
+        Target node name, or None if no unconditional edge exists.
+    """
+    if config is None:
+        config = load_workflows_config()
+
+    for edge in config.get("edges", []):
+        if edge.get("from") == from_node and "to" in edge:
+            return edge["to"]
+
+    return None
+
+
+def resolve_callable(dotted_path: str) -> Callable:
+    """Dynamically import and return a callable from a dotted path.
+
+    Args:
+        dotted_path: Fully-qualified Python callable
+                     (e.g. "src.core.conditions.route_critic_1").
+
+    Returns:
+        The callable object.
+
+    Raises:
+        ConfigError: If the module or attribute cannot be imported.
+    """
+    parts = dotted_path.rsplit(".", 1)
+    if len(parts) != 2:
+        raise ConfigError(
+            f"Invalid callable path '{dotted_path}': expected 'module.callable'"
+        )
+    module_path, attr_name = parts
+    try:
+        module = importlib.import_module(module_path)
+    except ImportError as e:
+        raise ConfigError(f"Cannot import module '{module_path}': {e}")
+    try:
+        return getattr(module, attr_name)
+    except AttributeError:
+        raise ConfigError(
+            f"Module '{module_path}' has no attribute '{attr_name}'"
+        )

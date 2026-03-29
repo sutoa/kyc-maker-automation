@@ -127,6 +127,60 @@ Each critic returns one of:
 
 <!-- MANUAL ADDITIONS START -->
 
+## Configuration-Driven Development — Non-Negotiable Principles
+
+This project uses `src/config/agents.yaml` and `src/config/workflows.yaml` as the **single source of truth** for all agent and workflow configuration. Every configurable value must come from these files. Violating these principles is the most common source of bugs and technical debt in this codebase.
+
+### Before writing any implementation code
+
+1. **Read both YAML files in full first.** Understand every attribute and how it maps to the framework (LangGraph, LangChain). Do not start coding until you can answer: "where does this value come from in the YAML?"
+2. **Every attribute in the YAML must be used.** If an attribute exists in the YAML and your code does not read it, that is a bug. No silent ignoring of config fields.
+3. **State what each YAML attribute drives** before implementing. If you cannot map an attribute to code behaviour, ask before proceeding.
+
+### Hardcoding is forbidden
+
+The following are **never** acceptable as hardcoded values in Python source:
+- Agent names (`"extractor"`, `"critic_1"`, etc.) — read from `agents.yaml` keys
+- Model names (`"gpt-4o"`, `"gemini-1.5-pro"`) — read from `defaults.model` or agent `model`
+- Temperature / max_tokens — read from `defaults.temperature` / `defaults.max_tokens`
+- Prompt file paths (`PROMPT_PATH = Path(...)`) — read from `system_prompt.file`
+- Retry counts (`MAX_RETRY_COUNT = 4`) — read from `retry.max_attempts`
+- Phase names (`"extraction"`, `"reconciliation"`, `"classification"`) — derive from nodes/edges
+- State key strings used outside of `WorkflowState` definition — read from agent `input_keys` / `output_key` / `retry_count_key`
+- Matching thresholds (`0.85`) — read from agent config
+- Checkpointer URIs — read from `runtime.checkpointer_uri`
+
+### The factory pattern — always use it
+
+Agent functions must be **created by a factory** (`src/core/agent_factory.py`) that reads `agents.yaml` config. Individual agent files (`extractor.py`, `critic.py`, etc.) must not hardcode any of the above. The factory is the only place that instantiates LLM providers, loads prompts, and resolves output schemas.
+
+### Generalisation over specificity
+
+- One routing function (`route_on_critic_decision`) handles all critic routing — not one per critic
+- One agent factory function handles all agent types — not one per agent
+- One node wrapper handles all agent nodes — not separate wrappers per agent type
+- If you find yourself writing nearly identical code for each agent, stop and generalise
+
+### Pre-implementation checklist
+
+Before implementing any feature that touches agents or workflow:
+- [ ] Read `src/config/agents.yaml` and `src/config/workflows.yaml` in full
+- [ ] Map every YAML attribute to the code that will read it
+- [ ] Identify any attributes not yet used and plan how to wire them
+- [ ] Confirm zero hardcoded agent names, model names, prompt paths, or thresholds in the implementation
+- [ ] Confirm the factory pattern is used — no agent is instantiated outside the factory
+
+### Post-implementation checklist
+
+Before marking any implementation complete:
+- [ ] `grep` for hardcoded agent names, model strings, prompt paths, retry counts
+- [ ] Confirm `agents_ref` in `workflows.yaml` is followed to load agents
+- [ ] Confirm `runtime.*` fields wire to `graph.compile()`
+- [ ] Confirm `observability.*` fields wire to LangSmith setup
+- [ ] Confirm `on_traverse.increment_key` is implemented in node wrapper, not hardcoded
+
+---
+
 ## Permissions
 
 The following operations are pre-approved — do not prompt for confirmation:

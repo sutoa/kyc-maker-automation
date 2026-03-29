@@ -1,208 +1,184 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "agent.schema.json",
-  "title": "Agent Configuration Schema",
-  "description": "Schema for validating KYC workflow agent configurations",
+  "title": "Agent Configuration Schema v1.2",
+  "description": "Schema for validating KYC workflow agents.yaml (AGENTFLOW v1.2)",
   "definitions": {
-    "agentType": {
-      "type": "string",
-      "enum": ["extractor", "critic", "reconciler", "classifier", "formatter"],
-      "description": "Type of agent determining its core behavior"
-    },
-    "criticPhase": {
-      "type": "string",
-      "enum": ["extraction", "reconciliation", "classification"],
-      "description": "Which workflow phase the critic validates"
-    },
     "retryConfig": {
       "type": "object",
       "properties": {
-        "max_retries": {
+        "max_attempts": {
           "type": "integer",
           "minimum": 0,
           "maximum": 10,
-          "default": 4,
           "description": "Maximum retry attempts before failing"
         },
-        "backoff_seconds": {
+        "backoff": {
+          "type": "string",
+          "enum": ["linear", "exponential", "fixed"],
+          "description": "Backoff strategy between retries"
+        },
+        "delay_seconds": {
           "type": "number",
           "minimum": 0,
-          "default": 1.0,
-          "description": "Initial backoff time between retries"
+          "description": "Initial delay in seconds between retries"
         }
       },
       "additionalProperties": false
     },
-    "llmConfig": {
+    "defaults": {
       "type": "object",
       "properties": {
         "model": {
           "type": "string",
-          "description": "Model name (e.g., gpt-4, gemini-pro)"
+          "description": "LiteLLM model string (e.g. openai/gpt-4o-mini)"
         },
         "temperature": {
           "type": "number",
           "minimum": 0,
-          "maximum": 2,
-          "default": 0,
-          "description": "LLM temperature setting"
+          "maximum": 1,
+          "description": "LLM temperature"
         },
         "max_tokens": {
           "type": "integer",
           "minimum": 1,
           "maximum": 128000,
-          "default": 4096,
-          "description": "Maximum tokens in LLM response"
-        }
-      },
-      "additionalProperties": false
-    },
-    "baseAgent": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9_]*$",
-          "description": "Unique agent identifier"
-        },
-        "type": {
-          "$ref": "#/definitions/agentType"
-        },
-        "description": {
-          "type": "string",
-          "description": "Human-readable description of agent purpose"
-        },
-        "prompt_file": {
-          "type": "string",
-          "pattern": "^[a-z0-9_]+\\.md$",
-          "description": "Markdown file containing the agent prompt"
-        },
-        "llm": {
-          "$ref": "#/definitions/llmConfig"
+          "description": "Maximum output tokens"
         },
         "retry": {
           "$ref": "#/definitions/retryConfig"
         }
       },
-      "required": ["name", "type", "prompt_file"]
+      "additionalProperties": false
     },
-    "extractorAgent": {
-      "allOf": [
-        { "$ref": "#/definitions/baseAgent" },
+    "systemPrompt": {
+      "type": "object",
+      "oneOf": [
         {
-          "type": "object",
+          "required": ["file"],
           "properties": {
-            "type": { "const": "extractor" },
-            "output_schema": {
+            "file": {
               "type": "string",
-              "description": "Reference to output Pydantic model"
-            }
-          }
-        }
-      ]
-    },
-    "criticAgent": {
-      "allOf": [
-        { "$ref": "#/definitions/baseAgent" },
-        {
-          "type": "object",
-          "properties": {
-            "type": { "const": "critic" },
-            "validates_phase": {
-              "$ref": "#/definitions/criticPhase"
-            },
-            "validation_rules": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "rule_id": { "type": "string" },
-                  "description": { "type": "string" },
-                  "severity": {
-                    "type": "string",
-                    "enum": ["error", "warning"]
-                  }
-                },
-                "required": ["rule_id", "description", "severity"]
-              },
-              "description": "Validation rules for the critic to enforce"
+              "description": "Relative path to prompt markdown file"
             }
           },
-          "required": ["validates_phase"]
-        }
-      ]
-    },
-    "reconcilerAgent": {
-      "allOf": [
-        { "$ref": "#/definitions/baseAgent" },
+          "additionalProperties": false
+        },
         {
-          "type": "object",
+          "required": ["inline"],
           "properties": {
-            "type": { "const": "reconciler" },
-            "matching_threshold": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 1,
-              "default": 0.85,
-              "description": "Fuzzy matching threshold for duplicate detection"
-            }
-          }
-        }
-      ]
-    },
-    "classifierAgent": {
-      "allOf": [
-        { "$ref": "#/definitions/baseAgent" },
-        {
-          "type": "object",
-          "properties": {
-            "type": { "const": "classifier" },
-            "csm_definition_file": {
+            "inline": {
               "type": "string",
-              "description": "Path to CSM criteria definition file"
+              "description": "Prompt text embedded directly"
             }
-          }
+          },
+          "additionalProperties": false
         }
       ]
     },
-    "formatterAgent": {
-      "allOf": [
-        { "$ref": "#/definitions/baseAgent" },
+    "outputSchema": {
+      "type": "object",
+      "oneOf": [
         {
-          "type": "object",
+          "required": ["ref"],
           "properties": {
-            "type": { "const": "formatter" },
-            "output_format": {
+            "ref": {
               "type": "string",
-              "enum": ["json"],
-              "default": "json"
+              "description": "Fully-qualified Pydantic class (e.g. src.models.person.ExtractedPerson)"
             }
-          }
+          },
+          "additionalProperties": false
+        },
+        {
+          "required": ["example"],
+          "properties": {
+            "example": {
+              "type": "object",
+              "description": "Sample JSON object; schema inferred at runtime"
+            }
+          },
+          "additionalProperties": false
         }
       ]
+    },
+    "agent": {
+      "type": "object",
+      "required": ["role", "goal", "backstory", "input_keys", "output_key", "system_prompt"],
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "Professional identity injected into system prompt"
+        },
+        "goal": {
+          "type": "string",
+          "description": "Primary objective; supports {var} interpolation"
+        },
+        "backstory": {
+          "type": "string",
+          "description": "Background context that shapes agent behaviour"
+        },
+        "model": {
+          "type": "string",
+          "description": "LiteLLM model string; overrides defaults.model"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "LLM temperature; overrides defaults.temperature"
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 128000,
+          "description": "Max output tokens; overrides defaults.max_tokens"
+        },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tool keys from the workflow tools registry"
+        },
+        "input_keys": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "State keys this agent reads as context"
+        },
+        "output_key": {
+          "type": "string",
+          "description": "State key this agent writes its result to"
+        },
+        "output_schema": {
+          "$ref": "#/definitions/outputSchema"
+        },
+        "system_prompt": {
+          "$ref": "#/definitions/systemPrompt"
+        },
+        "retry": {
+          "$ref": "#/definitions/retryConfig"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "type": "object",
+  "required": ["version", "agents"],
   "properties": {
     "version": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+$",
       "description": "Configuration schema version"
     },
+    "defaults": {
+      "$ref": "#/definitions/defaults"
+    },
     "agents": {
       "type": "object",
       "additionalProperties": {
-        "oneOf": [
-          { "$ref": "#/definitions/extractorAgent" },
-          { "$ref": "#/definitions/criticAgent" },
-          { "$ref": "#/definitions/reconcilerAgent" },
-          { "$ref": "#/definitions/classifierAgent" },
-          { "$ref": "#/definitions/formatterAgent" }
-        ]
+        "$ref": "#/definitions/agent"
       },
-      "description": "Map of agent name to agent configuration"
+      "description": "Map of agent key to agent configuration"
     }
   },
-  "required": ["version", "agents"],
   "additionalProperties": false
 }
