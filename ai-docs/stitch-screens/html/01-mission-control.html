@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KYC Crew Builder - Mission Control</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-highest": "#2d3449",
+              "outline-variant": "#414751",
+              "on-tertiary-fixed-variant": "#39485a",
+              "surface-container-low": "#131b2e",
+              "secondary-fixed-dim": "#c0c1ff",
+              "on-secondary-fixed": "#07006c",
+              "outline": "#8b919c",
+              "on-primary-fixed-variant": "#00497e",
+              "secondary-container": "#3131c0",
+              "surface-container": "#171f33",
+              "on-error-container": "#ffdad6",
+              "surface-dim": "#0b1326",
+              "on-secondary-fixed-variant": "#2f2ebe",
+              "tertiary-fixed-dim": "#b9c8de",
+              "surface-container-high": "#222a3d",
+              "surface-bright": "#31394d",
+              "error-container": "#93000a",
+              "tertiary-container": "#8392a6",
+              "on-secondary": "#1000a9",
+              "inverse-on-surface": "#283044",
+              "surface-tint": "#9fcaff",
+              "on-secondary-container": "#b0b2ff",
+              "on-primary-fixed": "#001d37",
+              "surface": "#0b1326",
+              "primary-container": "#4894e2",
+              "on-surface": "#dae2fd",
+              "inverse-surface": "#dae2fd",
+              "surface-variant": "#2d3449",
+              "secondary": "#c0c1ff",
+              "inverse-primary": "#0061a5",
+              "on-tertiary-fixed": "#0d1c2d",
+              "secondary-fixed": "#e1e0ff",
+              "primary": "#9fcaff",
+              "on-tertiary-container": "#1c2b3c",
+              "on-primary-container": "#002b4e",
+              "on-background": "#dae2fd",
+              "surface-container-lowest": "#060e20",
+              "error": "#ffb4ab",
+              "tertiary": "#b9c8de",
+              "primary-fixed-dim": "#9fcaff",
+              "background": "#0b1326",
+              "on-primary": "#003259",
+              "primary-fixed": "#d2e4ff",
+              "on-tertiary": "#233143",
+              "on-surface-variant": "#c0c7d3",
+              "tertiary-fixed": "#d4e4fa",
+              "on-error": "#690005"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #0b1326; color: #dae2fd; overflow-x: hidden; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
+        .glass-card {
+            background: rgba(19, 27, 46, 0.4);
+            backdrop-filter: blur(20px);
+            border: 0.5px solid rgba(159, 202, 255, 0.15);
+        }
+        .glass-card:hover {
+            border-color: rgba(159, 202, 255, 0.4);
+            box-shadow: inset 0 0 15px rgba(159, 202, 255, 0.05);
+        }
+        .mesh-gradient-bg {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-color: #0b1326;
+            background-image: 
+                url('https://lh3.googleusercontent.com/aida-public/AB6AXuDpVub2y6GhMWdesQYRvsmvvCoNYoH62ruRIb2ssz7fzzJvDL7VWM_zoWj_FAlgMWEJHHFlgz_UK5LEV89I-AgC9LrftpPgJwpbZn_eJfLtY1inKHOXWJdvFP5NkHGR96G_ahEHzlKy2TqTxWer7EMj0JBDySNMOHRqjclXNC7ochGv3HzOJCbBDyIiGNg5_Kj1A3kfaIQVT5wZzBIta6AjNozMToTZQaNTe1wI20pXdsoVen3SeaZTNZQ57_9pENRInofmjdMqqcM'),
+                radial-gradient(at 0% 0%, rgba(159, 202, 255, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(192, 193, 255, 0.08) 0px, transparent 50%);
+            background-size: cover;
+            background-blend-mode: overlay;
+            opacity: 0.4;
+        }
+        .pulse-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: #9fcaff;
+            position: relative;
+        }
+        .pulse-dot::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: rgba(159, 202, 255, 0.4);
+            animation: pulse-ring 4s infinite ease-in-out;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(2.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        /* 3D Pie Chart Visual Simulation */
+        .pie-3d-container {
+            perspective: 800px;
+        }
+        .pie-3d-wrap {
+            transform: rotateX(45deg) rotateZ(-15deg);
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease;
+        }
+        .pie-slice {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            clip-path: polygon(50% 50%, 100% 0, 100% 100%);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="min-h-screen">
+<div class="mesh-gradient-bg"></div>
+<!-- SideNavBar: Height 100% of viewport -->
+<nav class="h-screen w-60 fixed left-0 top-0 border-r-0 bg-[#0b1326] bg-gradient-to-b from-[#0b1326] to-[#121d33] shadow-[20px_0_40px_rgba(159,202,255,0.03)] flex flex-col py-6 px-4 z-50">
+<div class="mb-10 px-2">
+<h1 class="text-lg font-bold tracking-tight text-[#9fcaff] uppercase">KYC Crew Builder</h1>
+<p class="text-[10px] uppercase tracking-[0.1em] font-medium mt-1 text-white/60">v2.4.0 Pulse Active</p>
+</div>
+<div class="space-y-1 flex-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-[#9fcaff] bg-[#9fcaff]/10 border-r-2 border-[#9fcaff] transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">dashboard</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">smart_toy</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Agents</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">account_tree</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Workflows</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">play_circle</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Runs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">settings</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Settings</span>
+</a>
+</div>
+<div class="mt-auto px-2 pt-6 border-t border-[#414751]/20">
+<div class="flex items-center gap-3">
+<div class="w-7 h-7 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="digital architect" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHTsJRVE1fNOIq75EEk5MdZB_Ggs84RWcmXDGEyiW_6cwKWFCEwBV0Ys9_sTLPuDl9y7i4SdAfEI3l-5RibBbQAYNlXtgGjZ3NlL4drU-CByu8t2mNMrOVaFsK-OrU3oOkFQZxo3o1nGHOyWsEc5v0hxKp1rQcupWh9jIqZKint4e0NGUsITgSJVV3Z5mwnBiGRE26OqYuBRjiLdnndCI4RRgL1GKnwlQguWvoaUH1KjfYXdbEM-qGzjZRK3lctb7QKEHhCBRTa4M"/>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-[0.1em] font-bold text-white">System Admin</p>
+<div class="flex items-center gap-1.5 mt-0.5">
+<div class="pulse-dot"></div>
+<span class="text-[9px] text-slate-500">SECURE NODE</span>
+</div>
+</div>
+</div>
+</div>
+</nav>
+<!-- TopNavBar: Header fixed 'KYC Crew Builder' branding context -->
+<header class="fixed top-0 right-0 left-60 h-14 bg-[#0b1326]/40 backdrop-blur-xl flex justify-between items-center px-8 w-full border-b border-[#414751]/10 z-40">
+<div class="flex items-center gap-8">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-slate-500 text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-[10px] uppercase tracking-[0.1em] font-medium text-white pl-6 w-full placeholder-slate-600" placeholder="SEARCH SYSTEM..." type="text"/>
+</div>
+<div class="text-[10px] uppercase tracking-[0.1em] font-bold text-[#9fcaff]">
+                System Status: Optimal
+            </div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<button class="text-slate-400 hover:text-white transition-colors relative">
+<span class="material-symbols-outlined text-[1.2rem]">notifications</span>
+<span class="absolute top-0 right-0 w-1.5 h-1.5 bg-[#9fcaff] rounded-full"></span>
+</button>
+<button class="text-slate-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[1.2rem]">help_outline</span>
+</button>
+</div>
+<div class="h-4 w-[1px] bg-outline-variant/20"></div>
+<div class="flex items-center gap-3">
+<span class="text-[10px] uppercase tracking-[0.1em] font-medium text-slate-400">Node_Alpha_72</span>
+<div class="w-7 h-7 rounded-sm bg-gradient-to-br from-primary to-secondary p-[1px]">
+<div class="w-full h-full bg-[#0b1326] flex items-center justify-center">
+<span class="text-[9px] font-bold text-[#9fcaff]">AX</span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-60 pt-14 p-6 space-y-12">
+<!-- Hero Section -->
+<section class="max-w-7xl mx-auto pt-4">
+<p class="text-[10px] uppercase tracking-[0.2em] font-bold text-[#9fcaff] mb-1">Operational Overview</p>
+<h2 class="text-5xl font-black tracking-tight leading-none mb-3">Mission Control</h2>
+<div class="w-16 h-[2px] bg-[#9fcaff]"></div>
+</section>
+<!-- Stats and Content Wrapper for Structural Alignment -->
+<div class="max-w-7xl mx-auto space-y-6">
+<!-- Stats Grid: 3 columns to match lower 2-column layout width -->
+<section class="grid grid-cols-12 gap-6">
+<div class="col-span-4 glass-card rounded-lg p-5 transition-all">
+<p class="text-[10px] uppercase tracking-[0.15em] font-bold mb-3 text-white">Active Workflows</p>
+<div class="flex flex-col">
+<h3 class="text-3xl font-black tracking-tighter text-white">12</h3>
+<p class="text-[9px] text-[#9fcaff] font-bold uppercase mt-1 tracking-wider">Defined &amp; Operational</p>
+</div>
+<div class="mt-5 flex gap-1 h-0.5 items-end">
+<div class="flex-1 bg-[#9fcaff] h-full"></div>
+<div class="flex-1 bg-[#9fcaff] h-full"></div>
+<div class="flex-1 bg-[#9fcaff] h-full"></div>
+<div class="flex-1 bg-surface-container-highest h-full"></div>
+<div class="flex-1 bg-surface-container-highest h-full"></div>
+</div>
+</div>
+<div class="col-span-4 glass-card rounded-lg p-5 transition-all">
+<p class="text-[10px] uppercase tracking-[0.15em] font-bold mb-3 text-white">Active AI Agents</p>
+<div class="flex items-end justify-between">
+<h3 class="text-3xl font-black tracking-tighter text-white">12</h3>
+<div class="flex items-center gap-1.5 mb-1">
+<div class="pulse-dot"></div>
+<span class="text-[9px] text-slate-500 uppercase font-bold">Live</span>
+</div>
+</div>
+<div class="mt-5 flex gap-1 h-0.5 items-end">
+<div class="flex-1 bg-[#9fcaff] h-full"></div>
+<div class="flex-1 bg-[#9fcaff] h-full"></div>
+<div class="flex-1 bg-[#9fcaff] h-full"></div>
+<div class="flex-1 bg-[#9fcaff] h-full"></div>
+<div class="flex-1 bg-[#9fcaff] h-full"></div>
+</div>
+</div>
+<div class="col-span-4 glass-card rounded-lg p-5 transition-all">
+<p class="text-[10px] uppercase tracking-[0.15em] font-bold mb-3 text-white">Avg. Elapsed Time</p>
+<div class="flex items-end justify-between">
+<h3 class="text-3xl font-black tracking-tighter text-white">1.2s</h3>
+<span class="text-[9px] text-[#9fcaff] font-bold bg-[#9fcaff]/10 px-1.5 py-0.5 rounded tracking-tighter">OPTIMAL</span>
+</div>
+<div class="mt-5 flex items-center gap-1">
+<div class="h-0.5 bg-[#9fcaff] w-[40%]"></div>
+<div class="h-0.5 bg-surface-container-highest flex-1"></div>
+</div>
+</div>
+</section>
+<!-- Main Dashboard Split: Lower sections alignment -->
+<section class="grid grid-cols-12 gap-6 items-stretch">
+<!-- Recent Runs: Column 1-7 (Matched with stats width) -->
+<div class="col-span-8 flex flex-col space-y-4">
+<div class="flex justify-between items-end">
+<div>
+<h4 class="uppercase tracking-[0.2em] font-black text-white text-xs">Recent Runs</h4>
+<p class="text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400">Stream #009-Delta</p>
+</div>
+<button class="text-[9px] uppercase tracking-[0.1em] font-bold text-[#9fcaff] border-b border-[#9fcaff]/30 pb-0.5 hover:border-[#9fcaff] transition-colors">View All Streams</button>
+</div>
+<div class="glass-card rounded-lg overflow-hidden flex-1 flex flex-col">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-white/5"><th class="px-5 py-2.5 text-[9px] uppercase tracking-[0.15em] font-bold text-slate-400">ID</th>
+<th class="px-5 py-2.5 text-[9px] uppercase tracking-[0.15em] font-bold text-slate-400">Entity</th>
+<th class="px-5 py-2.5 text-[9px] uppercase tracking-[0.15em] font-bold text-slate-400">Status</th>
+<th class="px-5 py-2.5 text-[9px] uppercase tracking-[0.15em] font-bold text-slate-400 text-right">Confidence</th></tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<tr class="hover:bg-[#9fcaff]/5 transition-colors">
+<td class="px-5 py-3 font-mono text-[10px] text-[#9fcaff]">#R-9021</td>
+<td class="px-5 py-3 text-[11px] font-medium text-white">Global FinTech Ltd.</td>
+<td class="px-5 py-3">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+<span class="text-[10px] uppercase tracking-wide text-primary font-bold">Completed</span>
+</div>
+</td>
+<td class="px-5 py-3 text-right text-[11px] font-bold text-white">99.8%</td>
+</tr>
+<tr class="hover:bg-[#9fcaff]/5 transition-colors">
+<td class="px-5 py-3 font-mono text-[10px] text-[#9fcaff]">#R-9020</td>
+<td class="px-5 py-3 text-[11px] font-medium text-white">Oceanic Ventures</td>
+<td class="px-5 py-3">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+<span class="text-[10px] uppercase tracking-wide text-secondary font-bold">Processing</span>
+</div>
+</td>
+<td class="px-5 py-3 text-right text-[11px] font-medium text-slate-500">--</td>
+</tr>
+<tr class="hover:bg-[#9fcaff]/5 transition-colors">
+<td class="px-5 py-3 font-mono text-[10px] text-[#9fcaff]">#R-9019</td>
+<td class="px-5 py-3 text-[11px] font-medium text-white">Stark Industries</td>
+<td class="px-5 py-3">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+<span class="text-[10px] uppercase tracking-wide text-primary font-bold">Completed</span>
+</div>
+</td>
+<td class="px-5 py-3 text-right text-[11px] font-bold text-white">94.2%</td>
+</tr>
+<tr class="hover:bg-[#9fcaff]/5 transition-colors">
+<td class="px-5 py-3 font-mono text-[10px] text-[#9fcaff]">#R-9018</td>
+<td class="px-5 py-3 text-[11px] font-medium text-white">Cyberdyne Systems</td>
+<td class="px-5 py-3">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-error"></div>
+<span class="text-[10px] uppercase tracking-wide text-error font-bold">Failed</span>
+</div>
+</td>
+<td class="px-5 py-3 text-right text-[11px] font-bold text-white">12.0%</td>
+</tr>
+</tbody>
+</table>
+<div class="mt-auto p-4 border-t border-white/5 flex justify-between items-center">
+<p class="text-[9px] uppercase font-bold text-slate-500 tracking-widest">Active Streams: 04</p>
+<div class="flex gap-2">
+<div class="w-1 h-1 bg-[#9fcaff] rounded-full"></div>
+<div class="w-1 h-1 bg-[#9fcaff]/30 rounded-full"></div>
+<div class="w-1 h-1 bg-[#9fcaff]/30 rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Run Status Distribution: Column 8-12 (Perfectly aligned with stats and footer) -->
+<div class="col-span-4 flex flex-col space-y-4">
+<div>
+<h4 class="uppercase tracking-[0.2em] font-black text-white text-xs">Distribution</h4>
+<p class="text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400">Execution Analytics</p>
+</div>
+<div class="glass-card rounded-lg p-6 flex flex-col flex-1 justify-between">
+<div class="flex flex-col items-center gap-6">
+<!-- 3D Pie Chart Visual -->
+<div class="pie-3d-container w-32 h-32 relative">
+<div class="pie-3d-wrap w-full h-full relative">
+<div class="pie-slice bg-primary z-40" style="clip-path: polygon(50% 50%, 50% 0, 100% 0, 100% 100%, 0 100%, 0 15%);"></div>
+<div class="pie-slice bg-secondary z-30" style="clip-path: polygon(50% 50%, 0 15%, 0 0, 50% 0);"></div>
+<div class="pie-slice bg-slate-500 z-20" style="clip-path: polygon(50% 50%, 50% 0, 80% 0);"></div>
+<div class="pie-slice bg-error z-10" style="clip-path: polygon(50% 50%, 80% 0, 100% 0, 100% 20%);"></div>
+</div>
+</div>
+<div class="w-full space-y-2.5">
+<div class="flex items-center gap-3">
+<div class="w-2.5 h-2.5 rounded-sm bg-primary"></div>
+<span class="text-[9px] uppercase font-bold text-slate-400 flex-1 tracking-wider">Completed</span>
+<span class="text-[11px] font-bold text-white">65%</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-2.5 h-2.5 rounded-sm bg-secondary"></div>
+<span class="text-[9px] uppercase font-bold text-slate-400 flex-1 tracking-wider">Processing</span>
+<span class="text-[11px] font-bold text-white">15%</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-2.5 h-2.5 rounded-sm bg-slate-500"></div>
+<span class="text-[9px] uppercase font-bold text-slate-400 flex-1 tracking-wider">Pending</span>
+<span class="text-[11px] font-bold text-white">10%</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-2.5 h-2.5 rounded-sm bg-error"></div>
+<span class="text-[9px] uppercase font-bold text-slate-400 flex-1 tracking-wider">Failed</span>
+<span class="text-[11px] font-bold text-white">10%</span>
+</div>
+</div>
+</div>
+<div class="pt-4 mt-4 border-t border-white/5">
+<p class="text-[9px] uppercase font-black text-center tracking-[0.2em] text-[#9fcaff]">Integrity: 98.4%</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

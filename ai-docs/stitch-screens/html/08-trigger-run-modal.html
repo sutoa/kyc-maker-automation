@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;700;800&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-fixed": "#07006c",
+              "on-primary-container": "#002b4e",
+              "inverse-on-surface": "#283044",
+              "on-surface-variant": "#c0c7d3",
+              "outline-variant": "#414751",
+              "inverse-primary": "#0061a5",
+              "surface-container-lowest": "#060e20",
+              "on-tertiary-container": "#1c2b3c",
+              "tertiary": "#b9c8de",
+              "on-primary": "#003259",
+              "secondary": "#c0c1ff",
+              "on-tertiary": "#233143",
+              "on-primary-fixed": "#001d37",
+              "secondary-fixed-dim": "#c0c1ff",
+              "surface": "#0b1326",
+              "surface-container-high": "#222a3d",
+              "error-container": "#93000a",
+              "surface-variant": "#2d3449",
+              "on-background": "#dae2fd",
+              "background": "#0b1326",
+              "tertiary-container": "#8392a6",
+              "tertiary-fixed": "#d4e4fa",
+              "on-surface": "#dae2fd",
+              "on-error": "#690005",
+              "surface-bright": "#31394d",
+              "primary-fixed": "#d2e4ff",
+              "tertiary-fixed-dim": "#b9c8de",
+              "on-tertiary-fixed": "#0d1c2d",
+              "surface-container-low": "#131b2e",
+              "surface-container-highest": "#2d3449",
+              "error": "#ffb4ab",
+              "secondary-container": "#3131c0",
+              "outline": "#8b919c",
+              "on-primary-fixed-variant": "#00497e",
+              "secondary-fixed": "#e1e0ff",
+              "on-tertiary-fixed-variant": "#39485a",
+              "surface-container": "#171f33",
+              "surface-dim": "#0b1326",
+              "primary-container": "#4894e2",
+              "on-secondary-container": "#b0b2ff",
+              "surface-tint": "#9fcaff",
+              "on-secondary-fixed-variant": "#2f2ebe",
+              "primary-fixed-dim": "#9fcaff",
+              "on-secondary": "#1000a9",
+              "on-error-container": "#ffdad6",
+              "inverse-surface": "#dae2fd",
+              "primary": "#9fcaff"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(11, 19, 38, 0.6);
+            backdrop-filter: blur(24px);
+            border: 0.5px solid rgba(159, 202, 255, 0.2);
+        }
+        .bg-mesh {
+            background-image: radial-gradient(at 0% 0%, rgba(159, 202, 255, 0.05) 0px, transparent 50%),
+                              radial-gradient(at 100% 100%, rgba(192, 193, 255, 0.05) 0px, transparent 50%);
+        }
+        .json-editor::-webkit-scrollbar {
+            width: 6px;
+        }
+        .json-editor::-webkit-scrollbar-thumb {
+            background: #414751;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30 min-h-screen overflow-hidden">
+<!-- Background Layer: Blurred Runs Screen -->
+<div class="fixed inset-0 z-0 bg-mesh flex pointer-events-none filter blur-md grayscale-[0.2] opacity-40">
+<!-- SideNavBar Mockup -->
+<aside class="h-screen w-64 bg-[#0b1326] flex flex-col py-8 px-4 shadow-[40px_0_40px_rgba(159,202,255,0.06)]">
+<div class="text-xl font-bold tracking-tighter text-[#9fcaff] mb-12">KYC Architect</div>
+<nav class="space-y-6">
+<div class="flex items-center gap-3 text-slate-400 uppercase tracking-[0.1em] text-[0.6875rem]">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+                </div>
+<div class="flex items-center gap-3 text-slate-400 uppercase tracking-[0.1em] text-[0.6875rem]">
+<span class="material-symbols-outlined">smart_toy</span> Agents
+                </div>
+<div class="flex items-center gap-3 text-slate-400 uppercase tracking-[0.1em] text-[0.6875rem]">
+<span class="material-symbols-outlined">account_tree</span> Workflows
+                </div>
+<div class="flex items-center gap-3 text-[#9fcaff] font-bold border-r-2 border-[#9fcaff] bg-gradient-to-r from-[#9fcaff]/10 to-transparent uppercase tracking-[0.1em] text-[0.6875rem] py-2">
+<span class="material-symbols-outlined">play_circle</span> Runs
+                </div>
+</nav>
+</aside>
+<!-- Main Content Canvas Mockup -->
+<main class="flex-1 p-12 space-y-8">
+<header class="flex justify-between items-start mb-16">
+<div>
+<h1 class="text-5xl font-bold tracking-tighter mb-2">Workflow Runs</h1>
+<p class="text-slate-400 font-light tracking-widest text-sm uppercase">Active Intelligence Streams</p>
+</div>
+</header>
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-12 h-64 bg-surface-container-low rounded-xl border-outline-variant/10 border"></div>
+<div class="col-span-4 h-48 bg-surface-container-low rounded-xl border-outline-variant/10 border"></div>
+<div class="col-span-8 h-48 bg-surface-container-low rounded-xl border-outline-variant/10 border"></div>
+</div>
+</main>
+</div>
+<!-- Modal Overlay -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1326]/80 backdrop-blur-sm">
+<!-- Trigger Run Modal -->
+<div class="glass-panel w-full max-w-2xl rounded-2xl overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.5),0_0_40px_rgba(159,202,255,0.06)] flex flex-col">
+<!-- Modal Header -->
+<div class="px-8 py-6 flex justify-between items-center border-b border-outline-variant/10">
+<div>
+<h2 class="text-2xl font-light tracking-widest text-primary uppercase">Trigger Run</h2>
+<p class="text-xs font-light text-slate-400 tracking-wider mt-1">KYC Document Processing</p>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors text-slate-400 hover:text-white">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<!-- Modal Body -->
+<div class="px-8 py-8 space-y-8">
+<section>
+<div class="flex items-center gap-4 mb-2">
+<label class="label-sm uppercase tracking-[0.15em] text-primary/80 font-bold text-[0.6875rem]">Entry Inputs</label>
+<div class="h-[1px] flex-1 bg-gradient-to-r from-primary/20 to-transparent"></div>
+</div>
+<p class="text-sm text-slate-400 font-light mb-6">Provide the initial documents and workflow_id at minimum</p>
+<!-- Code Editor Interface -->
+<div class="relative group">
+<div class="absolute -inset-0.5 bg-gradient-to-br from-primary/20 to-secondary/10 rounded-lg blur opacity-30 group-hover:opacity-50 transition duration-500"></div>
+<div class="relative bg-surface-container-lowest rounded-lg border border-outline-variant/20 overflow-hidden font-mono text-[13px] leading-relaxed">
+<!-- Editor Tool Bar -->
+<div class="flex items-center justify-between px-4 py-2 bg-surface-container-low border-b border-outline-variant/10">
+<div class="flex gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-error/40"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-secondary/40"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-primary/40"></div>
+</div>
+<span class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">JSON Input</span>
+</div>
+<!-- Editor Content -->
+<div class="flex json-editor h-64 overflow-y-auto">
+<!-- Line Numbers -->
+<div class="w-12 bg-surface-container-low/50 py-4 flex flex-col items-center text-slate-600 select-none border-r border-outline-variant/10">
+<span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+</div>
+<!-- Syntax Content -->
+<div class="p-4 flex-1 text-on-surface whitespace-pre">
+<span class="text-secondary">{</span>
+<span class="text-primary">"workflow_id"</span>: <span class="text-tertiary">"run-001"</span>,
+  <span class="text-primary">"documents"</span>: <span class="text-secondary">[</span>
+<span class="text-secondary">{</span>
+<span class="text-primary">"filename"</span>: <span class="text-tertiary">"kyc_document.pdf"</span>,
+      <span class="text-primary">"content"</span>: <span class="text-tertiary">""</span>
+<span class="text-secondary">}</span>
+<span class="text-secondary">]</span>
+<span class="text-secondary">}</span></div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Modal Footer -->
+<div class="px-8 py-6 bg-surface-container-low/30 flex justify-end items-center gap-6">
+<button class="text-sm uppercase tracking-widest text-slate-400 hover:text-white transition-colors font-bold">
+                    Cancel
+                </button>
+<button class="relative group flex items-center gap-3 px-8 py-3 bg-primary text-on-primary rounded-lg font-bold uppercase tracking-widest text-xs transition-all hover:scale-[1.02] active:scale-[0.98]">
+<span class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"></span>
+                    Trigger
+                    <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+</div>
+<!-- Ambient Decoration -->
+<div class="absolute bottom-10 left-10 pointer-events-none opacity-20">
+<div class="w-32 h-32 rounded-full bg-primary blur-[80px]"></div>
+</div>
+</div>
+<!-- Living Architect Pulse pips -->
+<div class="fixed top-6 right-6 flex items-center gap-2 px-3 py-1 bg-surface-container-high/50 rounded-full border border-primary/20 z-50">
+<div class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(159,202,255,1)]"></div>
+<span class="text-[10px] uppercase tracking-tighter text-primary font-bold">System Pulse</span>
+</div>
+</body></html>

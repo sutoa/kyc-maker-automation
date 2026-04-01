@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__stitch__get_screen"
+    ],
+    "additionalDirectories": [
+      "/Users/tongsu/Documents/AI Ambitions/kyc-maker-automation/ai-docs/stitch-screens"
+    ]
+  }
+}

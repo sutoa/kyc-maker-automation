@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Run Detail - KYC Architect</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;700;800&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "background": "#0b1326",
+                        "surface": "#0b1326",
+                        "primary": "#9fcaff",
+                        "secondary": "#c0c1ff",
+                        "outline-variant": "#414751",
+                        "surface-container-lowest": "#060e20",
+                        "surface-container-low": "#131b2e",
+                        "surface-container": "#171f33",
+                        "surface-container-high": "#222a3d",
+                        "surface-container-highest": "#2d3449",
+                        "on-background": "#dae2fd",
+                        "on-surface": "#dae2fd",
+                        "error": "#ffb4ab",
+                        "error-container": "#93000a",
+                        "on-error-container": "#ffdad6"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(11, 19, 38, 0.4);
+            backdrop-filter: blur(20px);
+            border: 0.5px solid rgba(159, 202, 255, 0.15);
+        }
+        .glass-panel-light {
+            background: rgba(159, 202, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 0.5px solid rgba(159, 202, 255, 0.1);
+        }
+        .error-glow {
+            box-shadow: 0 0 20px -5px rgba(255, 180, 171, 0.3);
+        }
+        .pulse-error {
+            animation: pulse-red 4s infinite ease-in-out;
+        }
+        @keyframes pulse-red {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+        .neural-bg {
+            background-image: radial-gradient(circle at 2px 2px, rgba(159, 202, 255, 0.05) 1px, transparent 0);
+            background-size: 32px 32px;
+        }
+        .glow-border-primary {
+            border: 0.5px solid rgba(159, 202, 255, 0.3);
+            box-shadow: 0 0 10px rgba(159, 202, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30">
+<!-- SideNavBar Anchor -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col py-8 px-4 border-r border-[#414751]/20 bg-[#0b1326] bg-gradient-to-r from-[#0b1326] to-[#161f35] shadow-[40px_0_60px_-15px_rgba(159,202,255,0.06)] z-50">
+<div class="mb-10 px-2">
+<h1 class="text-xl font-bold tracking-tighter text-[#9fcaff]">KYC Architect</h1>
+<p class="font-light tracking-wider Inter text-[10px] uppercase opacity-50">Glacial Pulse System</p>
+</div>
+<button class="mb-8 w-full py-3 px-4 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center gap-3 hover:bg-primary/20 transition-all duration-500 group">
+<span class="material-symbols-outlined text-sm">add</span>
+<span class="uppercase tracking-[0.1em] text-[11px] font-medium">New Workflow</span>
+</button>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors duration-300 uppercase tracking-[0.1em] text-[11px]" href="#">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+        </a>
+<a class="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors duration-300 uppercase tracking-[0.1em] text-[11px]" href="#">
+<span class="material-symbols-outlined">smart_toy</span> Agents
+        </a>
+<a class="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors duration-300 uppercase tracking-[0.1em] text-[11px]" href="#">
+<span class="material-symbols-outlined">account_tree</span> Workflows
+        </a>
+<a class="flex items-center gap-4 px-4 py-3 text-[#9fcaff] bg-[#9fcaff]/10 border-r-2 border-[#9fcaff] font-medium uppercase tracking-[0.1em] text-[11px]" href="#">
+<span class="material-symbols-outlined">play_circle</span> Runs
+        </a>
+<a class="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors duration-300 uppercase tracking-[0.1em] text-[11px]" href="#">
+<span class="material-symbols-outlined">settings</span> Settings
+        </a>
+</nav>
+<div class="mt-auto flex items-center gap-3 px-2 pt-6 border-t border-outline-variant/20">
+<div class="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">AP</div>
+<div class="overflow-hidden">
+<p class="text-[11px] font-bold text-on-surface truncate">Architect Profile</p>
+<p class="text-[9px] uppercase tracking-tighter opacity-50">System Admin</p>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Anchor -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 z-40 flex items-center justify-between px-8 bg-[#0b1326]/40 backdrop-blur-xl border-b border-[#9fcaff]/10">
+<div class="flex items-center gap-4">
+<a class="text-slate-400 hover:text-primary transition-all flex items-center gap-2 text-[10px] uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined text-sm">arrow_back</span> Back to Runs
+        </a>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary cursor-pointer transition-all">notifications</span>
+<span class="absolute -top-1 -right-1 w-1.5 h-1.5 bg-error rounded-full"></span>
+</div>
+<span class="material-symbols-outlined text-slate-400 hover:text-primary cursor-pointer transition-all">help_outline</span>
+<div class="h-6 w-[1px] bg-outline-variant/20"></div>
+<div class="flex items-center gap-3">
+<span class="uppercase text-[9px] tracking-[0.2em] font-medium text-slate-400">Status: <span class="text-error font-bold ml-1">HALTED</span></span>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-64 pt-16 h-screen flex flex-col neural-bg overflow-hidden">
+<!-- Refined Run Sub-Header -->
+<section class="px-8 pt-10 pb-8 flex items-end justify-between">
+<div class="space-y-4">
+<h2 class="text-4xl font-light tracking-tight text-[#9fcaff] leading-none">KYC Document Processing</h2>
+<div class="flex items-center gap-6">
+<div class="flex flex-col gap-1">
+<span class="text-[9px] uppercase tracking-[0.2em] text-slate-500 font-semibold">Run identifier</span>
+<code class="font-mono text-[11px] text-primary/80">run-2024-03-29-14:32</code>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/20"></div>
+<div class="flex flex-col gap-1">
+<span class="text-[9px] uppercase tracking-[0.2em] text-slate-500 font-semibold">Current State</span>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error animate-pulse shadow-[0_0_8px_rgba(255,180,171,0.6)]"></span>
+<span class="text-[10px] text-error font-bold uppercase tracking-widest">Error Halted</span>
+</div>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/20"></div>
+<div class="flex flex-col gap-1">
+<span class="text-[9px] uppercase tracking-[0.2em] text-slate-500 font-semibold">Total Duration</span>
+<span class="text-[11px] text-on-surface font-medium uppercase tracking-wider">0m 47s</span>
+</div>
+</div>
+</div>
+<div class="flex gap-4 pb-1">
+<button class="px-6 py-2.5 text-[10px] uppercase tracking-[0.2em] font-bold border border-outline-variant/30 text-slate-300 hover:bg-white/5 transition-all glass-panel-light">
+                Download Logs
+            </button>
+<button class="px-6 py-2.5 text-[10px] uppercase tracking-[0.2em] font-bold bg-primary text-background hover:opacity-90 transition-all shadow-[0_0_20px_rgba(159,202,255,0.2)]">
+                Restart Run
+            </button>
+</div>
+</section>
+<!-- Layout Split -->
+<div class="flex-1 flex overflow-hidden px-8 pb-8 gap-6">
+<!-- Execution Diagram (60%) -->
+<div class="w-3/5 glass-panel rounded-xl flex flex-col relative overflow-hidden">
+<div class="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-lowest/30">
+<span class="uppercase text-[10px] tracking-widest font-bold text-slate-400">Execution Diagram</span>
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-sm text-slate-500 hover:text-primary cursor-pointer">zoom_in</span>
+<span class="material-symbols-outlined text-sm text-slate-500 hover:text-primary cursor-pointer">zoom_out</span>
+<span class="material-symbols-outlined text-sm text-slate-500 hover:text-primary cursor-pointer">center_focus_weak</span>
+</div>
+</div>
+<div class="flex-1 p-8 overflow-auto flex justify-center neural-bg">
+<div class="flex flex-col items-center gap-12 w-full max-w-xs relative">
+<!-- Node: Start -->
+<div class="relative z-10 w-48 py-3 bg-surface-container-high/40 border border-primary/20 rounded flex flex-col items-center justify-center opacity-80">
+<span class="material-symbols-outlined text-primary mb-1">play_arrow</span>
+<span class="uppercase text-[9px] tracking-widest font-bold">__start__</span>
+<span class="absolute -right-2 -top-2 w-5 h-5 bg-primary/20 rounded-full flex items-center justify-center border border-primary/40">
+<span class="material-symbols-outlined text-[12px] text-primary">check</span>
+</span>
+</div>
+<!-- Connector -->
+<div class="h-12 w-[1px] bg-primary/30"></div>
+<!-- Node: Extractor -->
+<div class="relative z-10 w-48 py-3 bg-surface-container-high/40 border border-primary/20 rounded flex flex-col items-center justify-center">
+<span class="material-symbols-outlined text-primary mb-1">data_object</span>
+<span class="uppercase text-[9px] tracking-widest font-bold">extractor</span>
+<span class="absolute -right-2 -top-2 w-5 h-5 bg-primary/20 rounded-full flex items-center justify-center border border-primary/40">
+<span class="material-symbols-outlined text-[12px] text-primary">check</span>
+</span>
+</div>
+<!-- Connector (Loopback Point) -->
+<div class="h-12 w-[1px] bg-error/30 relative">
+<div class="absolute top-1/2 -left-20 -translate-y-1/2 flex items-center">
+<div class="w-20 h-40 border-l border-b border-t border-error/40 rounded-l-xl -mt-40"></div>
+<div class="absolute top-[-80px] left-[-70px] bg-error/10 border border-error/30 text-error text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-tighter">retry × 4</div>
+</div>
+</div>
+<!-- Node: Critic 1 (ERROR) -->
+<div class="relative z-10 w-48 py-4 bg-error-container/10 border-2 border-error rounded-lg flex flex-col items-center justify-center error-glow">
+<span class="material-symbols-outlined text-error mb-1" style="font-variation-settings: 'FILL' 1;">gavel</span>
+<span class="uppercase text-[10px] tracking-widest font-extrabold text-error">critic_1</span>
+<span class="absolute -right-3 -top-3 w-7 h-7 bg-error rounded-full flex items-center justify-center border-2 border-background">
+<span class="material-symbols-outlined text-[16px] text-on-error font-bold">close</span>
+</span>
+</div>
+<!-- Muted Nodes -->
+<div class="h-12 w-[1px] bg-outline-variant/20"></div>
+<div class="w-48 py-3 bg-surface-container-lowest border border-outline-variant/10 rounded flex flex-col items-center justify-center opacity-30">
+<span class="material-symbols-outlined text-slate-500 mb-1">rebase_edit</span>
+<span class="uppercase text-[9px] tracking-widest font-bold">reconciler</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Node Detail Panel (40%) -->
+<div class="w-2/5 flex flex-col gap-6">
+<div class="flex-1 glass-panel rounded-xl flex flex-col overflow-hidden">
+<div class="p-6 border-b border-outline-variant/10 bg-surface-container-lowest/20">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-xl font-light text-white tracking-wide">critic_1</h3>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 mt-1 font-medium">Extraction Quality Auditor</p>
+</div>
+<span class="bg-error/10 border border-error/30 text-error text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Error</span>
+</div>
+<!-- Tabs -->
+<div class="flex gap-6 mt-8">
+<button class="text-[10px] uppercase tracking-widest font-bold text-slate-500 hover:text-slate-300">Input</button>
+<button class="text-[10px] uppercase tracking-widest font-bold text-slate-500 hover:text-slate-300">Output</button>
+<button class="text-[10px] uppercase tracking-widest font-bold text-slate-500 hover:text-slate-300">Timing</button>
+<button class="text-[10px] uppercase tracking-widest font-bold text-slate-500 hover:text-slate-300">State</button>
+<button class="text-[10px] uppercase tracking-widest font-bold text-error border-b-2 border-error pb-2">Error</button>
+</div>
+</div>
+<div class="flex-1 p-6 overflow-auto space-y-6 bg-[#0b1326]/20">
+<!-- Error Alert -->
+<div class="bg-error-container/5 border-l-2 border-error p-4 rounded-r glow-border-error">
+<p class="text-sm text-error font-medium leading-relaxed">Max retries exceeded: extraction failed validation after 4 attempts</p>
+</div>
+<!-- Critic Feedback -->
+<div class="space-y-3">
+<div class="flex items-center justify-between group cursor-pointer">
+<span class="uppercase text-[10px] tracking-widest font-bold text-slate-400">Critic Feedback</span>
+<span class="material-symbols-outlined text-sm text-slate-500 group-hover:text-primary transition-all">expand_less</span>
+</div>
+<div class="p-4 glass-panel-light rounded">
+<p class="text-[12px] text-slate-400 leading-relaxed font-light italic">
+                                "The document field 'Tax_ID' was consistently extracted with a confidence score below 0.82. The OCR engine reported visual noise around the secondary watermark, leading to character ambiguity in digits 4 through 7. Despite 4 re-sampling attempts with varied contrast settings, the threshold for architectural commitment was not met."
+                            </p>
+</div>
+</div>
+<!-- Stack Trace -->
+<div class="space-y-3 opacity-60">
+<div class="flex items-center justify-between group cursor-pointer">
+<span class="uppercase text-[10px] tracking-widest font-bold text-slate-500">Stack Trace</span>
+<div class="flex items-center gap-2">
+<span class="text-[9px] uppercase tracking-tighter text-slate-500">Show stack trace</span>
+<span class="material-symbols-outlined text-sm text-slate-500 group-hover:text-primary transition-all">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Status Legend -->
+<div class="h-32 glass-panel rounded-xl p-5 flex flex-col justify-center bg-surface-container-lowest/20">
+<span class="uppercase text-[9px] tracking-[0.2em] font-bold text-slate-500 mb-4 block">Status Legend</span>
+<div class="grid grid-cols-2 gap-y-3 gap-x-6">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(159,202,255,0.4)]"></span>
+<span class="text-[10px] uppercase tracking-widest text-slate-400">Success</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(192,193,255,0.4)]"></span>
+<span class="text-[10px] uppercase tracking-widest text-slate-400">In Progress</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-error shadow-[0_0_8px_rgba(255,180,171,0.4)]"></span>
+<span class="text-[10px] uppercase tracking-widest text-slate-400">Error</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant opacity-50"></span>
+<span class="text-[10px] uppercase tracking-widest text-slate-400 opacity-50">Pending</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Timeline (Gantt-style) -->
+<footer class="h-48 border-t border-outline-variant/10 bg-surface-container-lowest/20 backdrop-blur-md px-8 py-6 relative">
+<div class="flex justify-between items-center mb-6">
+<span class="uppercase text-[10px] tracking-widest font-bold text-slate-400">Execution Timeline</span>
+<span class="font-mono text-[11px] text-primary/60 font-medium">T+ 0:47.321</span>
+</div>
+<div class="relative h-16 w-full bg-surface-container-low/20 rounded-lg p-2 overflow-hidden border border-outline-variant/5">
+<!-- Vertical Now Line -->
+<div class="absolute right-[5%] top-0 bottom-0 w-[1px] bg-error shadow-[0_0_10px_rgba(255,180,171,0.8)] z-20">
+<div class="absolute -top-1 -left-1 w-2 h-2 bg-error rounded-full"></div>
+<div class="absolute top-2 left-2 text-[8px] font-bold text-error uppercase tracking-widest">now</div>
+</div>
+<div class="flex flex-col gap-2 h-full">
+<!-- Row 1 -->
+<div class="flex h-3 items-center gap-1">
+<div class="w-[5%] h-full bg-slate-500/30 rounded-sm" title="__start__"></div>
+<div class="w-[15%] h-full bg-primary/50 rounded-sm" title="extractor"></div>
+<div class="w-[12%] h-full bg-primary/20 rounded-sm" title="retry 1"></div>
+<div class="w-[12%] h-full bg-primary/20 rounded-sm" title="retry 2"></div>
+<div class="w-[12%] h-full bg-primary/20 rounded-sm" title="retry 3"></div>
+<div class="w-[15%] h-full bg-primary/20 rounded-sm" title="retry 4"></div>
+<div class="w-[8%] h-full bg-error/30 rounded-sm" title="critic_1 failed"></div>
+<div class="w-[8%] h-full bg-error/50 rounded-sm" title="critic_1 failed"></div>
+<div class="w-[8%] h-full bg-error border border-error/50 error-glow rounded-sm" title="Terminal Error"></div>
+</div>
+<!-- Time Markers -->
+<div class="flex justify-between mt-4 border-t border-outline-variant/10 pt-2 px-1">
+<span class="text-[8px] font-mono text-slate-600">0s</span>
+<span class="text-[8px] font-mono text-slate-600">10s</span>
+<span class="text-[8px] font-mono text-slate-600">20s</span>
+<span class="text-[8px] font-mono text-slate-600">30s</span>
+<span class="text-[8px] font-mono text-slate-600">40s</span>
+<span class="text-[8px] font-mono text-slate-600 uppercase tracking-tighter">Current</span>
+</div>
+</div>
+</div>
+</footer>
+</main>
+<!-- Mesh Gradient Overlay -->
+<div class="fixed inset-0 pointer-events-none opacity-20 z-0">
+<div class="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary blur-[160px] rounded-full"></div>
+<div class="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-secondary blur-[160px] rounded-full"></div>
+</div>
+</body></html>

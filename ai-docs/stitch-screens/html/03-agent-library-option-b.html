@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KYC Crew Builder - Agent Editor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: #0b1326;
+            color: #dae2fd;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
+        }
+        .glass-panel {
+            background: rgba(11, 19, 38, 0.4);
+            backdrop-filter: blur(20px);
+            border: 0.5px solid rgba(159, 202, 255, 0.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(159, 202, 255, 0.1);
+            border-radius: 10px;
+        }
+        .glacial-pulse {
+            background: radial-gradient(circle at 50% 50%, #131b2e 0%, #0b1326 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .glacial-pulse::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: transparent url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzlmY2FmZiIgc3Ryb2tlLXdpZHRoPSIwLjA1IiBzdHJva2UtZGFzaGFycmF5PSIxIDUiLz48L3N2Zz4=');
+            opacity: 0.08;
+            pointer-events: none;
+            z-index: 0;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "surface-container-low": "#131b2e",
+                "on-primary-fixed": "#001d37",
+                "on-surface-variant": "#c0c7d3",
+                "on-error-container": "#ffdad6",
+                "on-tertiary": "#233143",
+                "inverse-surface": "#dae2fd",
+                "outline-variant": "#414751",
+                "primary": "#9fcaff",
+                "on-error": "#690005",
+                "surface-variant": "#2d3449",
+                "surface-bright": "#31394d",
+                "surface": "#0b1326",
+                "tertiary-fixed-dim": "#b9c8de",
+                "on-secondary-fixed": "#07006c",
+                "tertiary-container": "#8392a6",
+                "surface-container": "#171f33",
+                "on-primary": "#003259",
+                "error-container": "#93000a",
+                "surface-container-high": "#222a3d",
+                "secondary-container": "#3131c0",
+                "outline": "#8b919c",
+                "on-secondary-container": "#b0b2ff",
+                "inverse-primary": "#0061a5",
+                "background": "#0b1326",
+                "on-secondary": "#1000a9",
+                "inverse-on-surface": "#283044",
+                "secondary": "#c0c1ff",
+                "on-secondary-fixed-variant": "#2f2ebe",
+                "primary-container": "#4894e2",
+                "tertiary": "#b9c8de",
+                "secondary-fixed-dim": "#c0c1ff",
+                "tertiary-fixed": "#d4e4fa",
+                "on-primary-container": "#002b4e",
+                "surface-dim": "#0b1326",
+                "on-tertiary-container": "#1c2b3c",
+                "on-background": "#dae2fd",
+                "on-tertiary-fixed-variant": "#39485a",
+                "surface-tint": "#9fcaff",
+                "surface-container-lowest": "#060e20",
+                "on-surface": "#dae2fd",
+                "surface-container-highest": "#2d3449",
+                "on-tertiary-fixed": "#0d1c2d",
+                "primary-fixed-dim": "#9fcaff",
+                "primary-fixed": "#d2e4ff",
+                "secondary-fixed": "#e1e0ff",
+                "error": "#ffb4ab",
+                "on-primary-fixed-variant": "#00497e"
+              },
+              fontFamily: {
+                "headline": ["Inter"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+            },
+          },
+        }
+    </script>
+</head>
+<body class="min-h-screen overflow-hidden bg-surface selection:bg-primary/30">
+<div class="flex h-screen overflow-hidden">
+<!-- 1. Persistent Left Sidebar -->
+<aside class="h-screen w-60 flex-shrink-0 flex flex-col justify-between py-6 px-4 bg-[#0b1326] bg-gradient-to-b from-[#0b1326] to-[#121d33] border-r border-[#414751]/20 z-50">
+<div class="space-y-10">
+<div class="px-2">
+<h1 class="text-lg font-bold tracking-tight text-[#9fcaff] uppercase">KYC Crew Builder</h1>
+<p class="text-[10px] uppercase tracking-[0.1em] font-medium mt-1 text-white/60">v2.4.0 Pulse Active</p>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">dashboard</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-[#9fcaff] bg-[#9fcaff]/10 border-r-2 border-[#9fcaff] transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Agents</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">account_tree</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Workflows</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">play_circle</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Runs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">settings</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Settings</span>
+</a>
+</nav>
+</div>
+<div class="space-y-1 pt-6 border-t border-[#414751]/20">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">account_circle</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Profile</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">help_outline</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Support</span>
+</a>
+</div>
+</aside>
+<!-- 2. Middle Panel: Agent List -->
+<section class="w-[320px] flex-shrink-0 flex flex-col border-r border-outline-variant/10 bg-[#0b1326]/40 backdrop-blur-md">
+<div class="p-6 space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="text-xl font-light tracking-widest uppercase text-primary">Agents</h2>
+<button class="bg-primary/20 hover:bg-primary/30 text-primary px-3 py-1.5 rounded text-[10px] font-bold tracking-wider uppercase border border-primary/30 transition-all active:scale-95">
+                        New Agent
+                    </button>
+</div>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
+<input class="w-full bg-transparent border-b border-outline-variant/20 py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-primary/50 transition-colors placeholder:text-outline-variant" placeholder="Search agents..." type="text"/>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-4 pb-12 space-y-3">
+<!-- extractor (Active Card) -->
+<div class="p-4 rounded-xl glass-panel bg-gradient-to-l from-primary/10 to-transparent border-primary/40 cursor-pointer group transition-all duration-300">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-bold text-primary tracking-wide">extractor</span>
+<span class="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/20 font-bold uppercase tracking-widest">LLM</span>
+</div>
+<p class="text-[11px] text-on-surface-variant line-clamp-1 mb-3">KYC Document Extraction Specialist</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[12px] text-primary/60">memory</span>
+<span class="text-[10px] font-medium text-primary/60 tracking-tight">gpt-4o-mini</span>
+</div>
+</div>
+<!-- critic_1 -->
+<div class="p-4 rounded-xl border border-outline-variant/10 hover:border-primary/20 hover:bg-surface-container-high/40 cursor-pointer group transition-all duration-300 opacity-60">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-bold text-on-surface/80 tracking-wide group-hover:text-primary transition-colors">critic_1</span>
+<span class="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary/70 border border-primary/10 font-bold uppercase tracking-widest">LLM</span>
+</div>
+<p class="text-[11px] text-on-surface-variant/70 line-clamp-1 mb-3">Quality Control &amp; Validation</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[12px] text-outline">memory</span>
+<span class="text-[10px] font-medium text-outline tracking-tight">gpt-4o-mini</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. Right Panel: Agent Editor (Harmonized with SCREEN_26 and Glacial Pulse) -->
+<section class="flex-1 flex flex-col glacial-pulse relative overflow-hidden">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 bg-[#0b1326]/80 backdrop-blur-md border-b border-white/5">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<h2 class="text-2xl font-bold tracking-tight text-white">extractor</h2>
+<span class="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-mono border border-primary/20">AGENT_ID: 982-EX</span>
+</div>
+<nav class="hidden md:flex gap-6">
+<a class="text-[#9fcaff] border-b-2 border-[#9fcaff] pb-1 text-[10px] uppercase tracking-[0.2em] font-bold" href="#">Builder</a>
+<a class="text-slate-400 hover:text-white transition-colors text-[10px] uppercase tracking-[0.2em] font-bold" href="#">Testing</a>
+<a class="text-slate-400 hover:text-white transition-colors text-[10px] uppercase tracking-[0.2em] font-bold" href="#">Versions</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-white/5 rounded-full px-4 py-1.5 border border-outline-variant/10">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Autosaved 2m ago</span>
+</div>
+<div class="flex items-center gap-4 text-slate-400">
+<span class="material-symbols-outlined cursor-pointer hover:text-white transition-colors">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-white transition-colors">help_outline</span>
+<div class="w-8 h-8 rounded-full border border-outline-variant/30 flex items-center justify-center overflow-hidden">
+<img alt="User" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOADKfG92nB5tXhaOe8LtczFl2xBjXK2daBoCR8ZwwPhbcR6CU50isNF-5XfWJ0M4cr2tbS_mQuv27SA9YZ9ksZ26VM81toVcR4CtQsYXboMdz8CEFpXKfvJka4WqMlrjwzJDo3RtozykgwEQvxYX7nfVnuRLtOoXsywF9TtfFwlxMz4Svrxw6ad6lJ3Sccr6nxwsGmZ52tCi-uJzKEXf6FxyYakQbLDotP-tJlmsYnU6xzljBrhSbZm_RZ4I5Ey8VnhakQCKR6sA"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Workspace Canvas -->
+<div class="flex-1 overflow-y-auto custom-scrollbar px-12 py-10 space-y-16 pb-40 relative z-10">
+<!-- Section 1: Agent Identity -->
+<section class="space-y-8">
+<div class="flex items-baseline justify-between border-b border-outline-variant/10 pb-4">
+<h3 class="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+<span class="text-primary/40 font-mono text-lg">01</span>
+                            Identity
+                        </h3>
+<span class="text-[10px] uppercase tracking-[0.2em] text-primary/60 font-bold">General Details</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+<div class="space-y-2 group">
+<label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold group-focus-within:text-primary transition-colors">Agent Role</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant/20 focus:ring-0 focus:border-primary text-on-surface text-lg py-3 transition-all placeholder:text-slate-600" type="text" value="KYC Document Extraction Specialist"/>
+</div>
+<div class="space-y-2 group">
+<label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold group-focus-within:text-primary transition-colors">Primary Goal</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant/20 focus:ring-0 focus:border-primary text-on-surface text-lg py-3 transition-all placeholder:text-slate-600" type="text" value="Extract all person records from KYC documents with accurate source references"/>
+</div>
+<div class="md:col-span-2 space-y-4">
+<label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Backstory</label>
+<div class="glass-panel p-6 rounded-xl border-white/5">
+<textarea class="w-full bg-transparent border-0 focus:ring-0 text-slate-300 font-mono text-sm leading-relaxed resize-none" rows="4">You are an expert in regulatory data extraction with a focus on AML/KYC compliance. Your specialty is parsing unstructured identity documentation to build structured person-entity records while preserving data lineage and confidence scores.</textarea>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Execution Engine -->
+<section class="space-y-8">
+<div class="flex items-baseline justify-between border-b border-outline-variant/10 pb-4">
+<h3 class="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+<span class="text-primary/40 font-mono text-lg">02</span>
+                            Execution
+                        </h3>
+<span class="text-[10px] uppercase tracking-[0.2em] text-primary/60 font-bold">Logic Flow</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+<div class="space-y-2">
+<label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Execution Type</label>
+<div class="relative">
+<select class="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl px-6 py-4 text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:border-primary">
+<option selected="">llm (Large Language Model)</option>
+<option>python_script</option>
+<option>api_endpoint</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">expand_more</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Retry Count Key</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant/20 focus:ring-0 focus:border-primary text-on-surface py-3 transition-all font-mono text-sm text-primary" type="text" value="extraction_retry_count"/>
+</div>
+<div class="space-y-4">
+<label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Input Keys</label>
+<div class="flex flex-wrap gap-2">
+<div class="bg-primary/10 text-primary border border-primary/20 rounded-full px-4 py-1.5 flex items-center gap-2 group">
+<span class="text-xs font-mono">documents</span>
+<span class="material-symbols-outlined text-[16px] cursor-pointer opacity-50 group-hover:opacity-100 transition-opacity">close</span>
+</div>
+<div class="bg-primary/10 text-primary border border-primary/20 rounded-full px-4 py-1.5 flex items-center gap-2 group">
+<span class="text-xs font-mono">extraction_feedback</span>
+<span class="material-symbols-outlined text-[16px] cursor-pointer opacity-50 group-hover:opacity-100 transition-opacity">close</span>
+</div>
+<button class="bg-white/5 text-slate-400 border border-dashed border-white/10 rounded-full px-4 py-1.5 flex items-center gap-1 hover:bg-white/10 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span class="text-xs font-bold uppercase tracking-wider">Add Key</span>
+</button>
+</div>
+</div>
+<div class="space-y-4">
+<label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Output Key</label>
+<div class="bg-surface-container-low px-4 py-3 rounded-xl border border-outline-variant/10 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary/60 text-sm">output</span>
+<span class="text-primary font-mono text-sm">extracted_persons</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Output Schema -->
+<section class="space-y-8">
+<div class="flex items-baseline justify-between border-b border-outline-variant/10 pb-4">
+<h3 class="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+<span class="text-primary/40 font-mono text-lg">03</span>
+                            Output Schema
+                        </h3>
+<span class="text-[10px] uppercase tracking-[0.2em] text-primary/60 font-bold">Model Definition</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+<div class="space-y-2 group">
+<label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Schema Reference (REF)</label>
+<div class="flex items-center gap-3 bg-surface-container-low px-4 py-4 rounded-xl border border-outline-variant/10 group-focus-within:border-primary/40 transition-colors">
+<span class="material-symbols-outlined text-primary/60">schema</span>
+<input class="bg-transparent border-0 p-0 focus:ring-0 text-slate-200 font-mono text-sm w-full" type="text" value="src.models.person.ExtractedPerson"/>
+</div>
+</div>
+<div class="flex items-center justify-between glass-panel p-6 rounded-xl border-white/5">
+<div class="space-y-1">
+<span class="text-[10px] uppercase tracking-widest text-slate-400 font-bold block">Format as List</span>
+<span class="text-[9px] text-slate-500 uppercase tracking-tighter">Output will be an array of objects</span>
+</div>
+<div class="w-12 h-6 bg-primary/20 rounded-full p-1 cursor-pointer flex items-center transition-all">
+<div class="w-4 h-4 bg-primary rounded-full ml-auto shadow-[0_0_8px_rgba(159,202,255,0.6)]"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 4: System Prompt & Tuning -->
+<section class="space-y-8">
+<div class="flex items-baseline justify-between border-b border-outline-variant/10 pb-4">
+<h3 class="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+<span class="text-primary/40 font-mono text-lg">04</span>
+                            System Prompt
+                        </h3>
+<span class="text-[10px] uppercase tracking-[0.2em] text-primary/60 font-bold">Engine Configuration</span>
+</div>
+<div class="space-y-6">
+<div class="flex items-center justify-between">
+<label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Prompt File Template</label>
+<span class="text-[9px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20 uppercase tracking-widest">Linked File</span>
+</div>
+<div class="flex items-center gap-4 bg-surface-container-low border border-outline-variant/20 rounded-xl px-6 py-4 group hover:border-primary/30 transition-all">
+<span class="material-symbols-outlined text-primary">description</span>
+<span class="font-mono text-sm text-slate-300 flex-1">../prompts/extractor.md</span>
+<span class="material-symbols-outlined text-slate-500 cursor-pointer hover:text-white transition-colors">edit</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12 pt-6">
+<div class="space-y-6">
+<div class="flex justify-between items-center">
+<label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Engine Precision</label>
+<span class="text-[10px] text-primary font-mono uppercase tracking-widest">Top-k: 40</span>
+</div>
+<div class="relative pt-4 px-2">
+<div class="h-1 w-full bg-surface-variant rounded-full">
+<div class="absolute left-0 top-0 h-1 bg-primary w-[30%] rounded-full"></div>
+<div class="absolute left-[30%] top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow-[0_0_15px_rgba(159,202,255,0.5)] border-2 border-surface cursor-pointer"></div>
+</div>
+<div class="flex justify-between mt-4">
+<span class="text-[9px] text-slate-600 font-mono uppercase tracking-tighter">Reasoning</span>
+<span class="text-[9px] text-slate-600 font-mono uppercase tracking-tighter">Creative</span>
+</div>
+</div>
+</div>
+<div class="space-y-6">
+<div class="flex justify-between items-center">
+<label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Tool Selection</label>
+<span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">2 Active</span>
+</div>
+<div class="flex gap-4">
+<div class="w-12 h-12 rounded-xl glass-panel border-primary/30 flex items-center justify-center text-primary shadow-[0_0_10px_rgba(159,202,255,0.1)]">
+<span class="material-symbols-outlined">data_object</span>
+</div>
+<div class="w-12 h-12 rounded-xl glass-panel border-primary/30 flex items-center justify-center text-primary shadow-[0_0_10px_rgba(159,202,255,0.1)]">
+<span class="material-symbols-outlined">api</span>
+</div>
+<button class="w-12 h-12 rounded-xl border border-dashed border-white/10 flex items-center justify-center text-slate-600 hover:text-primary hover:border-primary/40 transition-all">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Sticky Footer Actions -->
+<footer class="mt-auto border-t border-outline-variant/10 bg-[#0b1326]/90 backdrop-blur-2xl px-10 py-6 flex justify-between items-center z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 group cursor-pointer">
+<span class="material-symbols-outlined text-slate-500 group-hover:text-error transition-colors">delete</span>
+<span class="text-[10px] uppercase tracking-widest text-slate-500 group-hover:text-error transition-colors font-bold">Discard Changes</span>
+</div>
+<div class="w-px h-6 bg-outline-variant/20"></div>
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-primary text-sm">bolt</span>
+<span class="text-[10px] text-slate-400 font-medium">Target: <strong class="text-slate-200">99.8% precision</strong></span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-8 py-2.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-slate-300 border border-outline-variant/30 hover:bg-white/5 transition-all">
+                        Save Draft
+                    </button>
+<button class="px-10 py-2.5 rounded-xl text-[10px] uppercase tracking-widest font-extrabold text-on-primary bg-primary shadow-[0_0_30px_rgba(159,202,255,0.25)] hover:shadow-[0_0_50px_rgba(159,202,255,0.4)] transition-all">
+                        Update Agent
+                    </button>
+</div>
+</footer>
+</section>
+</div>
+</body></html>

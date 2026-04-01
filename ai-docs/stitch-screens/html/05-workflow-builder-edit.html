@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KYC Crew Builder - Workflow Architect</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-surface": "#dae2fd",
+              "background": "#0b1326",
+              "secondary-fixed-dim": "#c0c1ff",
+              "on-primary-container": "#002b4e",
+              "error": "#ffb4ab",
+              "on-tertiary-fixed": "#0d1c2d",
+              "surface-bright": "#31394d",
+              "secondary": "#c0c1ff",
+              "on-tertiary-container": "#1c2b3c",
+              "secondary-container": "#3131c0",
+              "primary-container": "#4894e2",
+              "tertiary-fixed-dim": "#b9c8de",
+              "outline": "#8b919c",
+              "surface-container-highest": "#2d3449",
+              "tertiary": "#b9c8de",
+              "surface-variant": "#2d3449",
+              "on-primary-fixed": "#001d37",
+              "on-error": "#690005",
+              "on-error-container": "#ffdad6",
+              "secondary-fixed": "#e1e0ff",
+              "primary": "#9fcaff",
+              "primary-fixed-dim": "#9fcaff",
+              "on-tertiary-fixed-variant": "#39485a",
+              "surface-container-low": "#131b2e",
+              "primary-fixed": "#d2e4ff",
+              "tertiary-container": "#8392a6",
+              "surface-container-lowest": "#060e20",
+              "surface": "#0b1326",
+              "on-primary": "#003259",
+              "surface-container": "#171f33",
+              "on-background": "#dae2fd",
+              "inverse-primary": "#0061a5",
+              "on-surface-variant": "#c0c7d3",
+              "inverse-on-surface": "#283044",
+              "on-primary-fixed-variant": "#00497e",
+              "tertiary-fixed": "#d4e4fa",
+              "on-secondary": "#1000a9",
+              "error-container": "#93000a",
+              "surface-container-high": "#222a3d",
+              "on-secondary-fixed-variant": "#2f2ebe",
+              "on-secondary-fixed": "#07006c",
+              "surface-dim": "#0b1326",
+              "outline-variant": "#414751",
+              "on-tertiary": "#233143",
+              "inverse-surface": "#dae2fd",
+              "surface-tint": "#9fcaff",
+              "on-secondary-container": "#b0b2ff"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .dot-grid {
+            background-image: radial-gradient(circle, #414751 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .n8n-node {
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .n8n-node:hover {
+            box-shadow: 0 0 20px rgba(159, 202, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        .pulse-light {
+            animation: pulse 4s infinite ease-in-out;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+        .glass-panel {
+            background: rgba(23, 31, 51, 0.7);
+            backdrop-filter: blur(12px);
+            border: 0.5px solid rgba(159, 202, 255, 0.15);
+        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body overflow-hidden h-screen flex">
+<!-- SideNavBar (Persistent) -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col z-50 bg-[#0b1326] border-r border-[#414751]/20 bg-gradient-to-r from-[#0b1326] to-[#161f35] shadow-[40px_0_60px_-15px_rgba(159,202,255,0.06)]">
+<div class="p-6">
+<div class="flex items-center gap-2 mb-8">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">architecture</span>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tighter text-[#9fcaff]">KYC Crew</h1>
+<p class="uppercase text-[11px] tracking-[0.1em] font-medium text-slate-500">Architect v2.4</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors hover:bg-[#c0c1ff]/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="uppercase text-[11px] tracking-[0.1em] font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors hover:bg-[#c0c1ff]/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="uppercase text-[11px] tracking-[0.1em] font-medium">Agents</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#9fcaff] bg-[#9fcaff]/10 border-r-2 border-[#9fcaff] transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_tree</span>
+<span class="uppercase text-[11px] tracking-[0.1em] font-medium">Workflows</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors hover:bg-[#c0c1ff]/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">play_circle</span>
+<span class="uppercase text-[11px] tracking-[0.1em] font-medium">Runs</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors hover:bg-[#c0c1ff]/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="uppercase text-[11px] tracking-[0.1em] font-medium">Settings</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6 border-t border-[#414751]/20">
+<div class="flex items-center gap-3">
+<img alt="Operator" class="w-10 h-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuByNV7aGTEoTQOsEKw7aXZbjwzIyOcGe4gx08kEAHX0asdmPZTzZl_FdIGx3zS6LWTW6NTzr79HxgDLPfoWrKTP-hK7um7GPj1nmCLKVcd2NvtsCkQz4SeB-aJ5p3gsSqjbn_pSzYYQrhSFUxSv7cH32iSQmVjoEHmtGUICP09rjZMClpqRnEechRZWUjI3i8ntIgrY1xKP-P8BHhxocXWJFYOYjmHtjR1reM2yemR2s7z6nlI6TVwgKwgffRwFnHpYgpeX6_3VrOc"/>
+<div class="overflow-hidden">
+<p class="text-xs font-bold text-[#9fcaff] truncate uppercase tracking-widest">Operator Profile</p>
+<p class="text-[10px] text-slate-500 truncate">System Admin</p>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 ml-64 flex flex-col relative">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 left-64 h-16 z-40 bg-[#0b1326]/80 backdrop-blur-xl border-b border-[#414751]/20 flex justify-between items-center px-8">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#9fcaff] text-sm">description</span>
+<h2 class="text-sm font-medium tracking-wide">KYC Document Processing</h2>
+</div>
+<div class="h-4 w-[1px] bg-outline-variant/30"></div>
+<div class="flex items-center gap-2 px-2 py-1 rounded bg-surface-container-low border border-outline-variant/20">
+<div class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-light"></div>
+<span class="uppercase text-[10px] tracking-widest text-slate-400 font-medium">Saved</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<span class="uppercase text-[10px] tracking-widest text-[#9fcaff] font-medium">System: Active</span>
+<span class="uppercase text-[10px] tracking-widest text-slate-500 font-medium">Latency: 24ms</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-surface-container-high hover:bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/20 text-xs font-bold uppercase tracking-widest transition-all">Save</button>
+<button class="bg-primary hover:bg-primary/90 text-on-primary px-6 py-2 rounded-lg text-xs font-extrabold uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95">
+<span class="material-symbols-outlined text-sm">play_arrow</span> Execute
+                </button>
+</div>
+<div class="flex items-center gap-4 border-l border-[#414751]/20 pl-6">
+<span class="material-symbols-outlined text-slate-500 hover:text-[#c0c1ff] cursor-pointer">notifications</span>
+<span class="material-symbols-outlined text-slate-500 hover:text-[#c0c1ff] cursor-pointer">help_outline</span>
+</div>
+</div>
+</header>
+<!-- Main Canvas Content -->
+<div class="flex-1 mt-16 overflow-hidden flex relative">
+<!-- Vertical Canvas (SCREEN_22 Style) -->
+<div class="flex-1 relative overflow-auto bg-surface-container-lowest dot-grid p-20 flex flex-col items-center">
+<svg class="absolute inset-0 w-full h-full pointer-events-none" style="min-height: 2000px;">
+<defs>
+<marker id="arrowhead" markerheight="7" markerwidth="10" orient="auto" refx="9" refy="3.5">
+<polygon fill="#414751" points="0 0, 10 3.5, 0 7"></polygon>
+</marker>
+</defs>
+<!-- Bezier Connections -->
+<path class="stroke-outline-variant/40 fill-none" d="M 50% 120 L 50% 180" marker-end="url(#arrowhead)" stroke-width="2"></path>
+<path class="stroke-outline-variant/40 fill-none" d="M 50% 280 L 50% 340" marker-end="url(#arrowhead)" stroke-width="2"></path>
+<path class="stroke-outline-variant/40 fill-none" d="M 50% 520 L 50% 580" marker-end="url(#arrowhead)" stroke-width="2"></path>
+<path class="stroke-outline-variant/40 fill-none" d="M 50% 720 L 50% 780" marker-end="url(#arrowhead)" stroke-width="2"></path>
+<!-- Loopback Arcs -->
+<path class="stroke-primary/40 fill-none" d="M 400 460 Q 200 460, 200 300 T 400 240" marker-end="url(#arrowhead)" stroke-dasharray="4 4" stroke-width="2"></path>
+<path class="stroke-error/40 fill-none" d="M 600 460 C 800 460, 800 1200, 560 1200" marker-end="url(#arrowhead)" stroke-dasharray="4 4" stroke-width="2"></path>
+</svg>
+<!-- Start Node -->
+<div class="n8n-node bg-surface-container-high rounded-xl w-60 mb-20 relative border border-outline-variant/10 shadow-lg">
+<div class="flex items-center gap-3 p-4">
+<div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+<div>
+<p class="text-xs font-bold uppercase tracking-wider">__start__</p>
+<p class="text-[10px] text-slate-500">Trigger Workflow</p>
+</div>
+</div>
+<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-surface-container-high border-2 border-outline-variant flex items-center justify-center">
+<div class="w-1.5 h-1.5 rounded-full bg-primary shadow-sm shadow-primary"></div>
+</div>
+</div>
+<!-- Extractor Node -->
+<div class="n8n-node bg-surface-container-high rounded-xl w-60 mb-20 relative border border-outline-variant/10 shadow-lg">
+<div class="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-surface-container-high border-2 border-outline-variant"></div>
+<div class="flex items-center gap-3 p-4">
+<div class="w-10 h-10 rounded-lg bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div>
+<p class="text-xs font-bold uppercase tracking-wider">extractor</p>
+<p class="text-[10px] text-slate-500">OCR Engine v4</p>
+</div>
+</div>
+<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-surface-container-high border-2 border-outline-variant flex items-center justify-center">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+</div>
+</div>
+<!-- Critic_1 Node (Active) -->
+<div class="n8n-node bg-surface-container-high ring-2 ring-primary/40 rounded-xl w-60 mb-20 relative border border-outline-variant/10 shadow-2xl">
+<div class="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-surface-container-high border-2 border-outline-variant"></div>
+<div class="flex items-center gap-3 p-4">
+<div class="w-10 h-10 rounded-lg bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div>
+<div class="flex items-center gap-1">
+<p class="text-xs font-bold uppercase tracking-wider">critic_1</p>
+<span class="w-1.5 h-1.5 rounded-full bg-primary pulse-light"></span>
+</div>
+<p class="text-[10px] text-slate-500">Quality Agent</p>
+</div>
+</div>
+<!-- Route Labels -->
+<div class="absolute -left-16 top-1/2 -translate-y-1/2">
+<span class="text-[9px] uppercase font-bold tracking-widest text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">fail_retry</span>
+</div>
+<div class="absolute -right-16 top-1/2 -translate-y-1/2">
+<span class="text-[9px] uppercase font-bold tracking-widest text-error bg-error/10 px-1.5 py-0.5 rounded border border-error/20">fail_max</span>
+</div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2">
+<span class="text-[9px] uppercase font-bold tracking-widest text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded border border-emerald-400/20">pass</span>
+</div>
+<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-surface-container-high border-2 border-outline-variant flex items-center justify-center">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+</div>
+</div>
+<!-- Reconciler Node -->
+<div class="n8n-node bg-surface-container-high rounded-xl w-60 mb-20 relative border border-outline-variant/10">
+<div class="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-surface-container-high border-2 border-outline-variant"></div>
+<div class="flex items-center gap-3 p-4">
+<div class="w-10 h-10 rounded-lg bg-tertiary-container/20 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">account_tree</span>
+</div>
+<div>
+<p class="text-xs font-bold uppercase tracking-wider">reconciler</p>
+<p class="text-[10px] text-slate-500">Schema Merger</p>
+</div>
+</div>
+<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-surface-container-high border-2 border-outline-variant flex items-center justify-center">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+</div>
+</div>
+</div>
+<!-- Right Node Inspector Sidebar (SCREEN_41 Style) -->
+<aside class="w-[380px] bg-[#0d1425] border-l border-[#414751]/20 z-50 flex flex-col shadow-[-20px_0_40px_rgba(0,0,0,0.4)]">
+<div class="p-4 border-b border-[#414751]/20 flex items-center justify-between bg-[#0b1326]/50">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#9fcaff] text-sm">settings_input_component</span>
+<h3 class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface">Node Inspector</h3>
+</div>
+<span class="material-symbols-outlined text-slate-500 cursor-pointer hover:text-white transition-colors text-sm">close</span>
+</div>
+<div class="flex-1 overflow-y-auto scrollbar-hide">
+<!-- Identity Section -->
+<div class="p-6 border-b border-[#414751]/10 bg-surface-container-low/20">
+<h4 class="uppercase text-[9px] tracking-widest text-slate-500 font-bold mb-4">Identity</h4>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-1">Name</label>
+<div class="bg-surface-container-lowest border border-[#414751]/20 p-2 text-[11px] font-mono text-[#9fcaff] rounded">critic_1</div>
+</div>
+<div>
+<label class="block text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-1">Type</label>
+<div class="bg-surface-container-lowest border border-[#414751]/20 p-2 text-[11px] font-mono text-on-surface rounded">agent</div>
+</div>
+</div>
+<div class="mt-4">
+<label class="block text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-1">Agent Ref</label>
+<div class="bg-surface-container-lowest border border-[#414751]/20 p-2 text-[11px] font-mono text-on-surface rounded">critic_1</div>
+</div>
+</div>
+<!-- Conditional Routing Section -->
+<div class="p-6 border-b border-[#414751]/10">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-[#9fcaff] text-xs">alt_route</span>
+<h4 class="uppercase text-[9px] tracking-widest text-slate-500 font-bold">Conditional Routing</h4>
+</div>
+<div class="space-y-4">
+<div>
+<label class="text-[8px] text-slate-500 uppercase font-bold block mb-2">Function (fn)</label>
+<div class="text-[10px] font-mono text-[#9fcaff]/80 bg-surface-container-lowest p-2 border border-[#414751]/20 rounded break-all leading-relaxed">
+                                src.core.conditions.route_on_critic_decision
+                            </div>
+</div>
+<div>
+<label class="text-[8px] text-slate-500 uppercase font-bold block mb-2">Routes Mapping</label>
+<div class="space-y-1.5">
+<div class="flex items-center justify-between p-2 bg-surface-container-lowest rounded border border-[#414751]/10 text-[10px] font-mono">
+<span class="text-[#9fcaff]">'pass'</span>
+<span class="text-slate-500">→</span>
+<span class="text-on-surface">reconciler</span>
+</div>
+<div class="flex items-center justify-between p-2 bg-surface-container-lowest rounded border border-[#414751]/10 text-[10px] font-mono">
+<span class="text-secondary">'fail_retry'</span>
+<span class="text-slate-500">→</span>
+<span class="text-on-surface">extractor</span>
+</div>
+<div class="flex items-center justify-between p-2 bg-surface-container-lowest rounded border border-[#414751]/10 text-[10px] font-mono">
+<span class="text-error">'fail_max'</span>
+<span class="text-slate-500">→</span>
+<span class="text-on-surface">end</span>
+</div>
+<div class="flex items-center justify-between p-2 bg-surface-container-lowest rounded border border-[#414751]/10 text-[10px] font-mono">
+<span class="text-slate-400">'default'</span>
+<span class="text-slate-500">→</span>
+<span class="text-on-surface">end</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- On Traverse Side Effects Section -->
+<div class="p-6 border-b border-[#414751]/10">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-[#9fcaff] text-xs">dynamic_form</span>
+<h4 class="uppercase text-[9px] tracking-widest text-slate-500 font-bold">On Traverse (Side Effects)</h4>
+</div>
+<div class="p-3 bg-surface-container-low border border-[#414751]/10 rounded-lg">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[9px] uppercase font-bold text-slate-500">When Route</span>
+<span class="text-[10px] font-mono text-secondary">'fail_retry'</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-[9px] uppercase font-bold text-slate-500">Increment Key</span>
+<span class="text-[10px] font-mono text-on-surface">'extraction_retry_count'</span>
+</div>
+</div>
+</div>
+<!-- Workflow Context Section -->
+<div class="p-6 border-b border-[#414751]/10">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-[#9fcaff] text-xs">public</span>
+<h4 class="uppercase text-[9px] tracking-widest text-slate-500 font-bold">Workflow Context</h4>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<span class="text-[8px] text-slate-500 uppercase font-bold block mb-1">Max Steps</span>
+<div class="text-[11px] text-on-surface bg-surface-container-lowest p-2 border border-[#414751]/20 rounded">30</div>
+</div>
+<div>
+<span class="text-[8px] text-slate-500 uppercase font-bold block mb-1">Timeout</span>
+<div class="text-[11px] text-on-surface bg-surface-container-lowest p-2 border border-[#414751]/20 rounded">600s</div>
+</div>
+</div>
+</div>
+<!-- Observability Section -->
+<div class="p-6">
+<h4 class="uppercase text-[9px] tracking-widest text-slate-500 font-bold mb-4">Observability</h4>
+<div class="p-3 bg-surface-container-low border border-[#414751]/10 rounded-lg flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+<span class="text-[10px] font-bold uppercase tracking-wider">langsmith</span>
+</div>
+<span class="text-[9px] text-slate-500 font-mono">kyc_document_processing</span>
+</div>
+</div>
+</div>
+<!-- Inspector Footer Buttons -->
+<div class="p-6 border-t border-[#414751]/20 flex gap-3 bg-surface-container-lowest/50">
+<button class="flex-1 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-[#414751]/30 rounded text-[9px] uppercase tracking-widest font-bold text-on-surface transition-all">Duplicate</button>
+<button class="flex-1 py-2.5 border border-error/30 text-error uppercase text-[9px] tracking-widest font-bold hover:bg-error/5 transition-all">Delete Node</button>
+</div>
+</aside>
+</div>
+<!-- Bottom Float Info -->
+<div class="absolute bottom-6 left-72 z-40 bg-[#0b1326]/60 backdrop-blur-md border border-primary/20 px-4 py-2 rounded-full flex items-center gap-4 shadow-2xl">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary pulse-light"></span>
+<span class="uppercase text-[9px] tracking-[0.2em] font-bold text-[#9fcaff]">Engine Pulse: Stable</span>
+</div>
+<div class="w-[1px] h-3 bg-outline-variant/30"></div>
+<div class="flex items-center gap-2">
+<span class="uppercase text-[9px] tracking-[0.2em] font-bold text-slate-500">Node count: 12</span>
+</div>
+<div class="w-[1px] h-3 bg-outline-variant/30"></div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xs text-slate-500">zoom_in</span>
+<span class="uppercase text-[9px] tracking-[0.2em] font-bold text-slate-500">100%</span>
+</div>
+</div>
+</main>
+<!-- Ambient Background Mesh -->
+<div class="fixed inset-0 pointer-events-none -z-10 opacity-30">
+<div class="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-background via-surface-container-low to-background"></div>
+<div class="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full"></div>
+<div class="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-secondary/5 blur-[150px] rounded-full"></div>
+</div>
+</body></html>

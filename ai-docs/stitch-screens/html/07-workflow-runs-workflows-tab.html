@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KYC Architect - Workflows</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#0d1c2d",
+              "on-tertiary": "#233143",
+              "on-secondary": "#1000a9",
+              "on-primary-fixed": "#001d37",
+              "tertiary": "#b9c8de",
+              "on-secondary-fixed": "#07006c",
+              "secondary-container": "#3131c0",
+              "primary-fixed": "#d2e4ff",
+              "surface-variant": "#2d3449",
+              "on-background": "#dae2fd",
+              "inverse-primary": "#0061a5",
+              "primary": "#9fcaff",
+              "tertiary-fixed-dim": "#b9c8de",
+              "secondary-fixed-dim": "#c0c1ff",
+              "primary-container": "#4894e2",
+              "secondary": "#c0c1ff",
+              "outline": "#8b919c",
+              "outline-variant": "#414751",
+              "primary-fixed-dim": "#9fcaff",
+              "on-primary": "#003259",
+              "surface-container-highest": "#2d3449",
+              "surface-container-low": "#131b2e",
+              "surface-tint": "#9fcaff",
+              "secondary-fixed": "#e1e0ff",
+              "on-primary-fixed-variant": "#00497e",
+              "surface": "#0b1326",
+              "error": "#ffb4ab",
+              "on-tertiary-fixed-variant": "#39485a",
+              "on-surface-variant": "#c0c7d3",
+              "on-surface": "#dae2fd",
+              "on-secondary-container": "#b0b2ff",
+              "on-secondary-fixed-variant": "#2f2ebe",
+              "on-primary-container": "#002b4e",
+              "tertiary-container": "#8392a6",
+              "surface-container": "#171f33",
+              "surface-bright": "#31394d",
+              "inverse-on-surface": "#283044",
+              "surface-dim": "#0b1326",
+              "on-error-container": "#ffdad6",
+              "background": "#0b1326",
+              "tertiary-fixed": "#d4e4fa",
+              "on-tertiary-container": "#1c2b3c",
+              "error-container": "#93000a",
+              "surface-container-lowest": "#060e20",
+              "on-error": "#690005",
+              "surface-container-high": "#222a3d",
+              "inverse-surface": "#dae2fd"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        font-size: 20px;
+      }
+      .workflow-canvas {
+        background-image: radial-gradient(circle at 1px 1px, rgba(159, 202, 255, 0.05) 1px, transparent 0);
+        background-size: 40px 40px;
+      }
+      .glass-card {
+        background: rgba(11, 19, 38, 0.6);
+        backdrop-filter: blur(20px);
+        border: 0.5px solid rgba(159, 202, 255, 0.2);
+      }
+      .pulse-ring {
+        animation: pulse 4s infinite ease-in-out;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.3; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.1); }
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30 overflow-hidden">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#0b1326] flex flex-col py-8 px-4 shadow-[40px_0_40px_rgba(159,202,255,0.06)] z-50">
+<div class="mb-10 px-4">
+<span class="text-xl font-bold tracking-tighter text-[#9fcaff]">KYC Architect</span>
+<p class="font-light tracking-wider text-[0.6rem] text-slate-500 uppercase mt-1">Verified Enterprise</p>
+</div>
+<nav class="flex-1 space-y-2">
+<!-- Dashboard -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-[#c0c1ff] transition-colors duration-300 hover:bg-[#1c2538] rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="uppercase tracking-[0.1em] text-[0.6875rem]">Dashboard</span>
+</a>
+<!-- Agents -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-[#c0c1ff] transition-colors duration-300 hover:bg-[#1c2538] rounded-lg" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="uppercase tracking-[0.1em] text-[0.6875rem]">Agents</span>
+</a>
+<!-- Workflows (Active Intent for this page) -->
+<a class="flex items-center gap-3 px-4 py-3 text-[#9fcaff] font-bold border-r-2 border-[#9fcaff] bg-gradient-to-r from-[#9fcaff]/10 to-transparent transition-all active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="uppercase tracking-[0.1em] text-[0.6875rem]">Workflows</span>
+</a>
+<!-- Runs -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-[#c0c1ff] transition-colors duration-300 hover:bg-[#1c2538] rounded-lg" href="#">
+<span class="material-symbols-outlined">play_circle</span>
+<span class="uppercase tracking-[0.1em] text-[0.6875rem]">Runs</span>
+</a>
+<!-- Settings -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-[#c0c1ff] transition-colors duration-300 hover:bg-[#1c2538] rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="uppercase tracking-[0.1em] text-[0.6875rem]">Settings</span>
+</a>
+</nav>
+<div class="mt-auto px-4 pt-4 border-t border-outline-variant/10">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">person</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">Admin User</p>
+<p class="text-[0.6rem] text-slate-500 uppercase tracking-widest">Enterprise Tier</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Top Navigation Tabs (Content Scope) -->
+<header class="fixed top-0 right-0 left-64 h-16 bg-[#0b1326]/60 backdrop-blur-xl border-b border-[#414751]/20 z-40 flex items-center px-8">
+<div class="flex gap-8 items-center h-full">
+<a class="text-[#9fcaff] border-b-2 border-[#9fcaff] h-full flex items-center uppercase text-[0.6875rem] tracking-widest font-bold" href="#">Workflows</a>
+<a class="text-slate-400 hover:text-[#c0c1ff] transition-colors h-full flex items-center uppercase text-[0.6875rem] tracking-widest" href="#">Runs</a>
+</div>
+<div class="ml-auto flex items-center gap-6">
+<div class="relative">
+<input class="bg-surface-container-lowest border-none text-xs rounded-full px-4 py-2 w-64 focus:ring-1 focus:ring-primary/50 placeholder:text-slate-600" placeholder="Search components..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-2 text-slate-500 text-sm">search</span>
+</div>
+<span class="material-symbols-outlined text-slate-400 cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-slate-400 cursor-pointer hover:text-primary transition-colors">help_outline</span>
+</div>
+</header>
+<!-- Main Dashboard Area -->
+<main class="ml-64 pt-16 h-screen flex">
+<!-- Left Sub-Panel: Workflows List -->
+<section class="w-[280px] bg-surface-container-low border-r border-outline-variant/10 flex flex-col">
+<div class="p-6">
+<h2 class="font-light tracking-widest text-lg uppercase text-on-surface-variant">Workflows</h2>
+</div>
+<div class="flex-1 overflow-y-auto px-4 pb-8 space-y-3">
+<!-- Selected Card -->
+<div class="p-4 rounded-xl glass-card border-primary/40 bg-primary/5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-2">
+<div class="w-1.5 h-1.5 rounded-full bg-primary pulse-ring"></div>
+</div>
+<h3 class="text-xs font-bold text-primary uppercase tracking-wider">KYC Document Processing</h3>
+<p class="text-[0.7rem] text-on-surface/70 mt-2 leading-relaxed">Multi-agent KYC extraction and classification</p>
+<div class="mt-4 flex items-center gap-2 text-[0.6rem] text-slate-500 uppercase tracking-tighter">
+<span class="material-symbols-outlined text-[10px]">schedule</span>
+                        Last run: 2 hours ago
+                    </div>
+</div>
+<!-- Sample Card 1 -->
+<div class="p-4 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all border border-transparent hover:border-outline-variant/30 cursor-pointer group">
+<h3 class="text-xs font-bold text-on-surface uppercase tracking-wider group-hover:text-secondary">Customer Onboarding</h3>
+<p class="text-[0.7rem] text-slate-500 mt-2 leading-relaxed">Automated verify and welcome sequence</p>
+<div class="mt-4 flex items-center gap-2 text-[0.6rem] text-slate-500 uppercase tracking-tighter">
+<span class="material-symbols-outlined text-[10px]">block</span>
+                        Never triggered
+                    </div>
+</div>
+<!-- Sample Card 2 -->
+<div class="p-4 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all border border-transparent hover:border-outline-variant/30 cursor-pointer group">
+<h3 class="text-xs font-bold text-on-surface uppercase tracking-wider group-hover:text-secondary">Risk Scoring 2.0</h3>
+<p class="text-[0.7rem] text-slate-500 mt-2 leading-relaxed">Calculates exposure based on ledger data</p>
+<div class="mt-4 flex items-center gap-2 text-[0.6rem] text-slate-500 uppercase tracking-tighter">
+<span class="material-symbols-outlined text-[10px]">schedule</span>
+                        Last run: 1 day ago
+                    </div>
+</div>
+</div>
+</section>
+<!-- Right Panel: Canvas & Header -->
+<section class="flex-1 flex flex-col relative overflow-hidden">
+<!-- Canvas Mesh Background -->
+<div class="absolute inset-0 workflow-canvas opacity-30 pointer-events-none"></div>
+<div class="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-secondary/5 pointer-events-none"></div>
+<!-- Main Panel Header -->
+<div class="h-20 px-8 flex items-center justify-between z-10 bg-surface/40 backdrop-blur-sm border-b border-outline-variant/10">
+<div class="flex items-center gap-6">
+<div>
+<h1 class="text-xl font-light tracking-widest text-on-surface">KYC Document Processing</h1>
+<div class="flex items-center gap-4 mt-1">
+<span class="uppercase text-[0.6rem] tracking-[0.2em] text-primary font-bold">7 nodes active</span>
+<span class="uppercase text-[0.6rem] tracking-[0.2em] text-slate-500">Last modified: today</span>
+</div>
+</div>
+<div class="h-8 w-px bg-outline-variant/20 mx-2"></div>
+<div class="flex gap-2">
+<span class="px-2 py-1 rounded bg-surface-container-highest text-[0.6rem] uppercase tracking-widest text-on-surface-variant">Prod</span>
+<span class="px-2 py-1 rounded bg-surface-container-highest text-[0.6rem] uppercase tracking-widest text-on-surface-variant">v2.4.1</span>
+</div>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2.5 rounded-lg flex items-center gap-3 hover:brightness-110 transition-all active:scale-95 shadow-[0_0_20px_rgba(159,202,255,0.2)]">
+<span class="uppercase text-[0.75rem] font-bold tracking-widest">Trigger Run</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+<!-- Canvas Area (n8n Style) -->
+<div class="flex-1 overflow-auto p-12 flex justify-center items-start z-10">
+<div class="relative flex flex-col items-center space-y-16 py-12">
+<!-- SVG for Curved Connectors -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: -1;">
+<defs>
+<marker id="arrowhead" markerheight="7" markerwidth="10" orient="auto" refx="9" refy="3.5">
+<polygon fill="#414751" points="0 0, 10 3.5, 0 7"></polygon>
+</marker>
+</defs>
+<!-- Main Path Connectors (Simplified representation) -->
+<g fill="none" stroke="#414751" stroke-width="1.5">
+<path d="M 140 70 L 140 120" marker-end="url(#arrowhead)"></path>
+<path d="M 140 180 L 140 230" marker-end="url(#arrowhead)"></path>
+<path d="M 140 290 L 140 340" marker-end="url(#arrowhead)"></path>
+<path d="M 140 400 L 140 450" marker-end="url(#arrowhead)"></path>
+<path d="M 140 510 L 140 560" marker-end="url(#arrowhead)"></path>
+<path d="M 140 620 L 140 670" marker-end="url(#arrowhead)"></path>
+<!-- Loopback: Critic_1 to Extractor -->
+<path d="M 230 260 C 350 260, 350 150, 230 150" marker-end="url(#arrowhead)" stroke="#ffb4ab" stroke-dasharray="4"></path>
+</g>
+<!-- Labels for edges -->
+<text class="uppercase tracking-widest" fill="#ffb4ab" font-family="Inter" font-size="10" text-anchor="middle" x="310" y="205">fail_retry</text>
+<text class="uppercase tracking-widest" fill="#9fcaff" font-family="Inter" font-size="9" x="148" y="215">pass</text>
+</svg>
+<!-- START -->
+<div class="w-16 h-16 rounded-full glass-card flex items-center justify-center border-primary/30 relative">
+<span class="material-symbols-outlined text-primary">power_settings_new</span>
+<div class="absolute -bottom-6 text-[0.6rem] uppercase tracking-[0.2em] font-bold text-slate-500">__start__</div>
+</div>
+<!-- extractor -->
+<div class="w-44 p-4 rounded-xl glass-card flex items-center gap-4 relative">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">chip_extraction</span>
+</div>
+<div>
+<div class="text-[0.65rem] font-bold uppercase tracking-widest">extractor</div>
+<div class="text-[0.55rem] text-slate-400">PDF OCR Parser</div>
+</div>
+</div>
+<!-- critic_1 -->
+<div class="w-44 p-4 rounded-xl glass-card flex items-center gap-4 border-error/20">
+<div class="w-10 h-10 rounded-lg bg-error/10 flex items-center justify-center text-error">
+<span class="material-symbols-outlined">fact_check</span>
+</div>
+<div>
+<div class="text-[0.65rem] font-bold uppercase tracking-widest">critic_1</div>
+<div class="text-[0.55rem] text-slate-400">Quality Filter</div>
+</div>
+</div>
+<!-- reconciler -->
+<div class="w-44 p-4 rounded-xl glass-card flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">account_tree</span>
+</div>
+<div>
+<div class="text-[0.65rem] font-bold uppercase tracking-widest">reconciler</div>
+<div class="text-[0.55rem] text-slate-400">Cross-Ref DB</div>
+</div>
+</div>
+<!-- critic_2 -->
+<div class="w-44 p-4 rounded-xl glass-card flex items-center gap-4 border-primary/20">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">search_check</span>
+</div>
+<div>
+<div class="text-[0.65rem] font-bold uppercase tracking-widest">critic_2</div>
+<div class="text-[0.55rem] text-slate-400">Entity Audit</div>
+</div>
+</div>
+<!-- classifier -->
+<div class="w-44 p-4 rounded-xl glass-card flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">category</span>
+</div>
+<div>
+<div class="text-[0.65rem] font-bold uppercase tracking-widest">classifier</div>
+<div class="text-[0.55rem] text-slate-400">Risk Labeller</div>
+</div>
+</div>
+<!-- critic_3 -->
+<div class="w-44 p-4 rounded-xl glass-card flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">rule</span>
+</div>
+<div>
+<div class="text-[0.65rem] font-bold uppercase tracking-widest">critic_3</div>
+<div class="text-[0.55rem] text-slate-400">Final Validation</div>
+</div>
+</div>
+<!-- formatter -->
+<div class="w-44 p-4 rounded-xl glass-card flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-on-surface-variant/10 flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">terminal</span>
+</div>
+<div>
+<div class="text-[0.65rem] font-bold uppercase tracking-widest">formatter</div>
+<div class="text-[0.55rem] text-slate-400">JSON Payload</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Breadcrumb Overlay -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-6 py-2 rounded-full glass-card shadow-2xl z-20">
+<span class="material-symbols-outlined text-sm text-slate-500">grid_view</span>
+<span class="text-[0.6rem] uppercase tracking-widest text-slate-400">Project Alpha</span>
+<span class="material-symbols-outlined text-[10px] text-slate-600">chevron_right</span>
+<span class="text-[0.6rem] uppercase tracking-widest text-primary font-bold">KYC Doc Process</span>
+</div>
+<!-- Canvas Navigation Controls (Mock) -->
+<div class="absolute bottom-6 right-8 flex flex-col gap-2 z-20">
+<button class="w-10 h-10 glass-card rounded-lg flex items-center justify-center hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-slate-400 text-sm">add</span>
+</button>
+<button class="w-10 h-10 glass-card rounded-lg flex items-center justify-center hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-slate-400 text-sm">remove</span>
+</button>
+<button class="w-10 h-10 glass-card rounded-lg flex items-center justify-center hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-slate-400 text-sm">center_focus_strong</span>
+</button>
+</div>
+</section>
+</main>
+</body></html>

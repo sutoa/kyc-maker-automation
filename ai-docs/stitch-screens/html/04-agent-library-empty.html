@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KYC Crew Builder - Agent Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface": "#0b1326",
+            "on-tertiary-container": "#1c2b3c",
+            "on-tertiary": "#233143",
+            "secondary-fixed": "#e1e0ff",
+            "on-secondary": "#1000a9",
+            "on-secondary-fixed-variant": "#2f2ebe",
+            "surface-container": "#171f33",
+            "secondary-fixed-dim": "#c0c1ff",
+            "error": "#ffb4ab",
+            "surface-bright": "#31394d",
+            "on-background": "#dae2fd",
+            "surface-container-low": "#131b2e",
+            "inverse-on-surface": "#283044",
+            "primary-container": "#4894e2",
+            "outline": "#8b919c",
+            "surface-container-highest": "#2d3449",
+            "on-primary-fixed": "#001d37",
+            "on-surface": "#dae2fd",
+            "inverse-surface": "#dae2fd",
+            "surface-dim": "#0b1326",
+            "primary-fixed": "#d2e4ff",
+            "error-container": "#93000a",
+            "secondary-container": "#3131c0",
+            "on-error": "#690005",
+            "tertiary-fixed-dim": "#b9c8de",
+            "surface-container-lowest": "#060e20",
+            "on-surface-variant": "#c0c7d3",
+            "on-primary-fixed-variant": "#00497e",
+            "inverse-primary": "#0061a5",
+            "tertiary-container": "#8392a6",
+            "on-error-container": "#ffdad6",
+            "surface-tint": "#9fcaff",
+            "primary": "#9fcaff",
+            "tertiary-fixed": "#d4e4fa",
+            "tertiary": "#b9c8de",
+            "on-secondary-container": "#b0b2ff",
+            "secondary": "#c0c1ff",
+            "on-tertiary-fixed": "#0d1c2d",
+            "background": "#0b1326",
+            "outline-variant": "#414751",
+            "on-primary": "#003259",
+            "on-tertiary-fixed-variant": "#39485a",
+            "on-secondary-fixed": "#07006c",
+            "on-primary-container": "#002b4e",
+            "primary-fixed-dim": "#9fcaff",
+            "surface-container-high": "#222a3d",
+            "surface-variant": "#2d3449"
+          },
+          fontFamily: {
+            "headline": ["Inter"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      background-color: #0b1326;
+      font-family: 'Inter', sans-serif;
+      color: #dae2fd;
+      overflow: hidden;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    }
+    .mesh-background {
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(159, 202, 255, 0.03) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(192, 193, 255, 0.03) 0px, transparent 50%);
+    }
+    .glass-panel {
+      background: rgba(11, 19, 38, 0.6);
+      backdrop-filter: blur(20px);
+      border: 0.5px solid rgba(159, 202, 255, 0.1);
+    }
+    .glow-border-primary {
+      border: 0.5px solid rgba(159, 202, 255, 0.3);
+    }
+    .active-nav-glow {
+      box-shadow: 0 0 20px rgba(159, 202, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="flex h-screen mesh-background">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col z-40 h-screen w-64 border-r border-[#414751]/20 bg-[#0b1326] shadow-[0_0_40px_rgba(159, 202, 255, 0.06)]">
+<div class="p-6">
+<div class="flex items-center gap-2 mb-8">
+<span class="text-xl font-bold tracking-tighter text-[#9fcaff]">Crew Builder</span>
+</div>
+<nav class="space-y-1">
+<!-- Inactive: Dashboard -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors hover:bg-[#414751]/10" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="uppercase text-[11px] tracking-[0.1em] font-medium Inter">Dashboard</span>
+</a>
+<!-- Active: Agents -->
+<a class="flex items-center gap-3 px-4 py-3 text-[#9fcaff] bg-[#9fcaff]/10 border-r-2 border-[#9fcaff] transition-all duration-500 active-nav-glow" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="uppercase text-[11px] tracking-[0.1em] font-medium Inter">Agents</span>
+</a>
+<!-- Inactive: Workflows -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors hover:bg-[#414751]/10" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span class="uppercase text-[11px] tracking-[0.1em] font-medium Inter">Workflows</span>
+</a>
+<!-- Inactive: Runs -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors hover:bg-[#414751]/10" href="#">
+<span class="material-symbols-outlined" data-icon="play_circle">play_circle</span>
+<span class="uppercase text-[11px] tracking-[0.1em] font-medium Inter">Runs</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors hover:bg-[#414751]/10" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="uppercase text-[11px] tracking-[0.1em] font-medium Inter">Settings</span>
+</a>
+<div class="pt-6 border-t border-[#414751]/10 flex items-center gap-3 px-4">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden glow-border-primary">
+<img alt="Engineer Profile" class="w-full h-full object-cover opacity-80" data-alt="Close-up portrait of a professional systems engineer in soft laboratory lighting with tech interfaces blurred in the background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAO1rUf9lByavHNqxPcP8pen0zYX2WpSQzFyzejJIOmpKFOTjzR-Z8toD9DeIi6ZLO5TMXoOcdfpwcYGFHcDw3eKRUSkKO5jEW-M0mLhI_zE4LZhafeT-0zEZbL0ihsXjHH-AqkQuUQrex1gZsown1YYVx7BPDRsD_2KCwDv3jQ9WJfs4esz_85QJs2ZouOa1DLjk95GpBo6u7h7j2fDNAM0p63-3itJP0GyttomDsF4_6f_ru-tOl_maYldYTjNh1SsXcpRJT_eCM"/>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-widest text-slate-400">KYC Intelligence</span>
+<span class="text-[11px] font-bold text-[#9fcaff]">Architect V.1</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<div class="flex flex-col flex-1 ml-64">
+<!-- TopAppBar -->
+<header class="fixed top-0 right-0 left-64 h-16 flex items-center justify-between px-8 z-30 bg-[#0b1326]/80 backdrop-blur-xl border-b border-[#414751]/10">
+<div class="flex items-center gap-4">
+<span class="uppercase text-[11px] tracking-[0.2em] font-medium text-slate-500">Workspace</span>
+<span class="text-[#9fcaff] material-symbols-outlined text-sm">chevron_right</span>
+<span class="uppercase text-[11px] tracking-[0.2em] font-bold text-[#9fcaff]">Agent Library</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-slate-500 text-sm" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-[10px] tracking-[0.1em] text-slate-300 placeholder-slate-600 w-48 uppercase" placeholder="SEARCH AGENTS..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-slate-400">
+<button class="hover:text-[#9fcaff] transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:text-[#9fcaff] transition-colors">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Panel Layout -->
+<main class="flex-1 mt-16 flex overflow-hidden">
+<!-- Left Panel: Agent List (Empty State) -->
+<section class="w-[320px] border-r border-[#414751]/10 flex flex-col bg-surface-container-lowest/30 relative">
+<div class="p-8 flex items-center justify-between">
+<h1 class="text-xl font-light tracking-wider text-[#9fcaff]">Agents</h1>
+<button class="p-1 rounded-full bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-on-primary transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+</button>
+</div>
+<!-- Inner Empty State Left -->
+<div class="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+<div class="w-12 h-12 rounded-xl glass-panel flex items-center justify-center text-primary/40">
+<span class="material-symbols-outlined text-3xl" data-icon="extension">extension</span>
+</div>
+<div class="space-y-1">
+<p class="uppercase text-[11px] tracking-[0.15em] font-medium text-slate-400">No agents yet</p>
+<p class="text-[12px] text-slate-600 leading-relaxed font-light">The library is empty. Start by initializing your first KYC agent.</p>
+</div>
+<button class="group flex items-center gap-2 px-4 py-2 border border-outline-variant/20 hover:border-primary/40 rounded-full transition-all duration-500">
+<span class="uppercase text-[10px] tracking-[0.1em] text-slate-400 group-hover:text-primary">Create your first agent</span>
+<span class="material-symbols-outlined text-sm text-slate-500 group-hover:text-primary transition-transform group-hover:translate-x-1" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Asymmetric Detail -->
+<div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/10 to-transparent"></div>
+</section>
+<!-- Right Panel: Selection Detail (Empty State) -->
+<section class="flex-1 relative flex items-center justify-center p-16">
+<!-- Floating Mesh Detail -->
+<div class="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+<div class="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[100px]"></div>
+</div>
+<!-- High-blur Glass Container -->
+<div class="relative z-10 glass-panel p-12 max-w-xl w-full flex flex-col items-center text-center space-y-8 rounded-xl shadow-2xl">
+<div class="relative">
+<div class="w-16 h-16 rounded-full border border-primary/20 flex items-center justify-center bg-primary/5">
+<span class="material-symbols-outlined text-4xl text-primary/30" data-icon="ads_click">ads_click</span>
+</div>
+<!-- Pulse Indicator -->
+<div class="absolute -top-1 -right-1 flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-primary/40"></span>
+</div>
+</div>
+<div class="space-y-4">
+<h2 class="text-3xl font-light tracking-tight text-[#9fcaff]">Select an agent to edit,<br/>or create a new one</h2>
+<p class="text-slate-500 max-w-sm mx-auto text-sm font-light leading-relaxed">
+              Once an agent is selected, you can configure its logic parameters, risk thresholds, and deployment targets here.
+            </p>
+</div>
+<!-- Technical Grid Accent -->
+<div class="pt-8 grid grid-cols-3 gap-8 w-full border-t border-outline-variant/10">
+<div class="flex flex-col items-center gap-2">
+<span class="uppercase text-[9px] tracking-widest text-slate-600">Model Load</span>
+<span class="text-xs font-mono text-slate-400">STABLE</span>
+</div>
+<div class="flex flex-col items-center gap-2 border-x border-outline-variant/10 px-4">
+<span class="uppercase text-[9px] tracking-widest text-slate-600">Sync Status</span>
+<span class="text-xs font-mono text-slate-400">READY</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<span class="uppercase text-[9px] tracking-widest text-slate-600">Uptime</span>
+<span class="text-xs font-mono text-slate-400">99.9%</span>
+</div>
+</div>
+</div>
+<!-- Abstract Corner Graphic -->
+<div class="absolute bottom-12 right-12 flex flex-col items-end gap-1 opacity-20">
+<div class="h-px w-24 bg-gradient-to-l from-primary to-transparent"></div>
+<div class="h-px w-12 bg-gradient-to-l from-secondary to-transparent"></div>
+<span class="uppercase text-[8px] tracking-[0.4em] mt-2 font-bold text-primary">SYSTEM ARCHITECT // AGENT_LIB_EMPTY</span>
+</div>
+</section>
+</main>
+</div>
+<!-- Ambient Glow Texture Overlay -->
+<div class="fixed inset-0 pointer-events-none z-50 mix-blend-screen opacity-10">
+<div class="absolute inset-0 bg-[radial-gradient(#414751_0.5px,transparent_0.5px)] [background-size:24px_24px]"></div>
+</div>
+</body></html>

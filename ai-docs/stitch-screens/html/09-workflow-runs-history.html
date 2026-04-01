@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KYC Architect - Workflow Runs</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline-variant": "#414751",
+                        "surface-container-highest": "#2d3449",
+                        "on-tertiary": "#233143",
+                        "surface-bright": "#31394d",
+                        "background": "#0b1326",
+                        "surface-variant": "#2d3449",
+                        "surface-tint": "#9fcaff",
+                        "secondary-fixed-dim": "#c0c1ff",
+                        "on-secondary": "#1000a9",
+                        "on-primary": "#003259",
+                        "surface-dim": "#0b1326",
+                        "on-background": "#dae2fd",
+                        "inverse-on-surface": "#283044",
+                        "on-surface-variant": "#c0c7d3",
+                        "on-primary-container": "#002b4e",
+                        "on-primary-fixed": "#001d37",
+                        "inverse-surface": "#dae2fd",
+                        "secondary-fixed": "#e1e0ff",
+                        "secondary-container": "#3131c0",
+                        "primary": "#9fcaff",
+                        "on-secondary-fixed-variant": "#2f2ebe",
+                        "inverse-primary": "#0061a5",
+                        "on-tertiary-fixed": "#0d1c2d",
+                        "on-tertiary-container": "#1c2b3c",
+                        "on-error-container": "#ffdad6",
+                        "on-error": "#690005",
+                        "on-secondary-fixed": "#07006c",
+                        "error-container": "#93000a",
+                        "surface": "#0b1326",
+                        "surface-container-lowest": "#060e20",
+                        "surface-container-low": "#131b2e",
+                        "outline": "#8b919c",
+                        "on-tertiary-fixed-variant": "#39485a",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#d4e4fa",
+                        "primary-fixed-dim": "#9fcaff",
+                        "on-primary-fixed-variant": "#00497e",
+                        "secondary": "#c0c1ff",
+                        "primary-fixed": "#d2e4ff",
+                        "tertiary": "#b9c8de",
+                        "tertiary-container": "#8392a6",
+                        "tertiary-fixed-dim": "#b9c8de",
+                        "surface-container": "#171f33",
+                        "on-secondary-container": "#b0b2ff",
+                        "primary-container": "#4894e2",
+                        "surface-container-low": "#131b2e",
+                        "on-surface": "#dae2fd"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-border {
+            border: 0.5px solid rgba(159, 202, 255, 0.2);
+        }
+        .pulse-ring {
+            animation: pulse-ring 4s infinite ease-in-out;
+        }
+        @keyframes pulse-ring {
+            0% { opacity: 0.3; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0.3; transform: scale(0.95); }
+        }
+        .neural-mesh {
+            background-image: radial-gradient(circle at 2px 2px, rgba(159, 202, 255, 0.05) 1px, transparent 0);
+            background-size: 32px 32px;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30 selection:text-primary min-h-screen overflow-x-hidden">
+<!-- Sidebar Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#0b1326] flex flex-col border-r border-white/5 shadow-[40px_0_40px_rgba(159,202,255,0.06)] z-50">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-10">
+<div class="w-8 h-8 rounded bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-sm" data-icon="architecture">architecture</span>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tighter text-blue-100">KYC Architect</h1>
+<p class="uppercase tracking-widest text-[10px] font-light text-slate-500">Verified Intelligence</p>
+</div>
+</div>
+<nav class="space-y-1">
+<!-- Dashboard -->
+<a class="flex items-center gap-3 px-4 py-3 rounded text-slate-500 hover:text-slate-300 transition-colors duration-300 hover:bg-white/5" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="dashboard">dashboard</span>
+<span class="uppercase tracking-widest text-[10px]">Dashboard</span>
+</a>
+<!-- Agents -->
+<a class="flex items-center gap-3 px-4 py-3 rounded text-slate-500 hover:text-slate-300 transition-colors duration-300 hover:bg-white/5" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="smart_toy">smart_toy</span>
+<span class="uppercase tracking-widest text-[10px]">Agents</span>
+</a>
+<!-- Workflows -->
+<a class="flex items-center gap-3 px-4 py-3 rounded text-slate-500 hover:text-slate-300 transition-colors duration-300 hover:bg-white/5" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="account_tree">account_tree</span>
+<span class="uppercase tracking-widest text-[10px]">Workflows</span>
+</a>
+<!-- Runs (Active) -->
+<a class="flex items-center gap-3 px-4 py-3 rounded text-blue-200 bg-blue-500/10 border-r-2 border-blue-400 font-medium transition-all duration-500" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="play_circle">play_circle</span>
+<span class="uppercase tracking-widest text-[10px]">Runs</span>
+</a>
+<!-- Settings -->
+<a class="flex items-center gap-3 px-4 py-3 rounded text-slate-500 hover:text-slate-300 transition-colors duration-300 hover:bg-white/5" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="settings">settings</span>
+<span class="uppercase tracking-widest text-[10px]">Settings</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6">
+<button class="w-full py-3 bg-blue-500/10 border border-blue-400/30 text-blue-200 rounded-lg uppercase tracking-widest text-[10px] font-bold hover:bg-blue-500/20 transition-all">
+                New Workflow
+            </button>
+<div class="mt-6 flex items-center gap-3 p-3 rounded-xl bg-surface-container-low border border-white/5">
+<img alt="User Profile" class="w-8 h-8 rounded-full bg-surface-bright" data-alt="professional portrait of a high-tech intelligence officer, minimalist aesthetic, cool lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjLqejXqwu6f0zHsZhfitApp4b3CguHPk0_4uiwxPuaJi9voDfPlXfuDyC-TOa4dwdkfcEXxI16WbBEb6xylRXbYdSiBgnAVuL1bf1VVTKnM3lC7KqdWwnmMSgqSDS_3tX0uSaorkmb0iadEaYLoRyo2wcZpkBoCogr632i1JYr2DDusSqPK0oL_xt6K8tQ_Je63vfJXtizjKGEUDX4uUMfVjU3pDOeO2phLnGcJzucNFtvxAV47latJj-_vhCsiwnfD_VS_7l3UM"/>
+<div class="overflow-hidden">
+<p class="text-[10px] font-bold text-blue-100 truncate uppercase">Admin Shell</p>
+<p class="text-[9px] text-slate-500 truncate">Tier: Enterprise</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Shell -->
+<main class="ml-64 min-h-screen relative neural-mesh">
+<!-- Top Nav Bar -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 z-40 bg-[#0b1326]/60 backdrop-blur-xl flex justify-between items-center px-8 border-b border-white/5">
+<div class="flex items-center gap-8">
+<span class="text-lg font-light tracking-widest text-blue-100">Workflow Engine</span>
+<nav class="flex gap-6 h-full items-center">
+<a class="text-slate-400 hover:text-blue-200 uppercase tracking-widest text-[10px] transition-all" href="#">Overview</a>
+<a class="text-slate-400 hover:text-blue-200 uppercase tracking-widest text-[10px] transition-all" href="#">History</a>
+<a class="text-blue-300 border-b border-blue-400 pb-1 uppercase tracking-widest text-[10px]" href="#">Compliance</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm" data-icon="search">search</span>
+<input class="bg-white/5 border-none rounded-full pl-10 pr-4 py-1.5 text-[10px] tracking-widest focus:ring-1 focus:ring-primary/50 w-64 placeholder:text-slate-600" placeholder="SEARCH SYSTEM..." type="text"/>
+</div>
+<div class="flex items-center gap-3">
+<button class="text-slate-400 hover:text-blue-100 transition-all duration-300">
+<span class="material-symbols-outlined text-xl" data-icon="notifications">notifications</span>
+</button>
+<button class="text-slate-400 hover:text-blue-100 transition-all duration-300">
+<span class="material-symbols-outlined text-xl" data-icon="help_outline">help_outline</span>
+</button>
+<button class="px-4 py-1.5 bg-primary text-on-primary rounded text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all">
+                        Deploy
+                    </button>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="pt-24 px-8 pb-12 max-w-7xl mx-auto">
+<!-- Filters & Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+<div>
+<h2 class="text-5xl font-bold tracking-tighter text-white mb-2 leading-none">Run History</h2>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary pulse-ring"></div>
+<span class="uppercase tracking-[0.2em] text-[10px] text-primary/70">8 active streams monitored</span>
+</div>
+</div>
+<!-- Dropdown Group -->
+<div class="flex flex-wrap gap-4">
+<div class="flex flex-col gap-1.5">
+<label class="uppercase tracking-widest text-[9px] text-slate-500 font-bold ml-1">Status</label>
+<select class="bg-surface-container-low border border-white/10 rounded px-4 py-2 text-[11px] text-blue-100 tracking-wider focus:ring-primary/30 min-w-[120px]">
+<option>All Statuses</option>
+<option>Success</option>
+<option>Error</option>
+<option>In Progress</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="uppercase tracking-widest text-[9px] text-slate-500 font-bold ml-1">Workflow</label>
+<select class="bg-surface-container-low border border-white/10 rounded px-4 py-2 text-[11px] text-blue-100 tracking-wider focus:ring-primary/30 min-w-[180px]">
+<option>All Workflows</option>
+<option>Identity Verification</option>
+<option>AML Screening</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="uppercase tracking-widest text-[9px] text-slate-500 font-bold ml-1">Date Range</label>
+<button class="bg-surface-container-low border border-white/10 rounded px-4 py-2 text-[11px] text-blue-100 tracking-wider flex items-center justify-between gap-4 min-w-[160px]">
+<span>Last 7 Days</span>
+<span class="material-symbols-outlined text-sm text-slate-500" data-icon="calendar_today">calendar_today</span>
+</button>
+</div>
+</div>
+</div>
+<!-- High Density Table Card -->
+<div class="bg-surface-container-low/40 backdrop-blur-xl rounded-xl glass-border overflow-hidden shadow-2xl">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-white/5 bg-white/[0.02]">
+<th class="px-6 py-4 uppercase tracking-[0.15em] text-[10px] font-bold text-slate-500">Run ID</th>
+<th class="px-6 py-4 uppercase tracking-[0.15em] text-[10px] font-bold text-slate-500">Workflow Name</th>
+<th class="px-6 py-4 uppercase tracking-[0.15em] text-[10px] font-bold text-slate-500">Status</th>
+<th class="px-6 py-4 uppercase tracking-[0.15em] text-[10px] font-bold text-slate-500">Started</th>
+<th class="px-6 py-4 uppercase tracking-[0.15em] text-[10px] font-bold text-slate-500 text-right">Duration</th>
+<th class="px-6 py-4"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/[0.03]">
+<!-- Row 1: IN PROGRESS -->
+<tr class="group hover:bg-primary/5 transition-all duration-300 bg-primary/[0.03]">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<code class="text-xs font-mono text-primary font-medium tracking-tight">#RUN-8842-X</code>
+<span class="bg-primary/20 text-primary text-[8px] px-1.5 py-0.5 rounded font-black tracking-tighter">NEW</span>
+</div>
+</td>
+<td class="px-6 py-5 text-blue-100 text-sm font-light">KYC Identity Verification</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 w-fit">
+<div class="w-2 h-2 rounded-full bg-primary pulse-ring"></div>
+<span class="text-[9px] font-black uppercase tracking-widest text-primary">In Progress</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-400 text-xs">2m ago</td>
+<td class="px-6 py-5 text-right font-mono text-xs text-blue-200">01:23</td>
+<td class="px-6 py-5 text-right">
+<button class="text-slate-600 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2: SUCCESS -->
+<tr class="group hover:bg-white/[0.02] transition-all duration-300">
+<td class="px-6 py-5">
+<code class="text-xs font-mono text-slate-400 tracking-tight">#RUN-8841-A</code>
+</td>
+<td class="px-6 py-5 text-blue-100 text-sm font-light">Document Extraction Pipeline</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 w-fit">
+<div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+<span class="text-[9px] font-black uppercase tracking-widest text-emerald-400">Success</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-400 text-xs">15m ago</td>
+<td class="px-6 py-5 text-right font-mono text-xs text-slate-300">02:14</td>
+<td class="px-6 py-5 text-right">
+<button class="text-slate-600 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: SUCCESS -->
+<tr class="group hover:bg-white/[0.02] transition-all duration-300">
+<td class="px-6 py-5">
+<code class="text-xs font-mono text-slate-400 tracking-tight">#RUN-8840-C</code>
+</td>
+<td class="px-6 py-5 text-blue-100 text-sm font-light">Facial Biometric Match</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 w-fit">
+<div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+<span class="text-[9px] font-black uppercase tracking-widest text-emerald-400">Success</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-400 text-xs">1h ago</td>
+<td class="px-6 py-5 text-right font-mono text-xs text-slate-300">03:05</td>
+<td class="px-6 py-5 text-right">
+<button class="text-slate-600 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4: SUCCESS -->
+<tr class="group hover:bg-white/[0.02] transition-all duration-300">
+<td class="px-6 py-5">
+<code class="text-xs font-mono text-slate-400 tracking-tight">#RUN-8839-M</code>
+</td>
+<td class="px-6 py-5 text-blue-100 text-sm font-light">AML Global Watchlist Check</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 w-fit">
+<div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+<span class="text-[9px] font-black uppercase tracking-widest text-emerald-400">Success</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-400 text-xs">3h ago</td>
+<td class="px-6 py-5 text-right font-mono text-xs text-slate-300">01:48</td>
+<td class="px-6 py-5 text-right">
+<button class="text-slate-600 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5: ERROR -->
+<tr class="group hover:bg-white/[0.02] transition-all duration-300">
+<td class="px-6 py-5">
+<code class="text-xs font-mono text-error font-medium tracking-tight">#RUN-8838-F</code>
+</td>
+<td class="px-6 py-5 text-blue-100 text-sm font-light">Address Proof Validation</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-error/10 border border-error/20 w-fit">
+<div class="w-1.5 h-1.5 rounded-full bg-error"></div>
+<span class="text-[9px] font-black uppercase tracking-widest text-error">Error</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-400 text-xs">5h ago</td>
+<td class="px-6 py-5 text-right font-mono text-xs text-slate-300">00:47</td>
+<td class="px-6 py-5 text-right">
+<button class="text-slate-600 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 6: SUCCESS -->
+<tr class="group hover:bg-white/[0.02] transition-all duration-300">
+<td class="px-6 py-5">
+<code class="text-xs font-mono text-slate-400 tracking-tight">#RUN-8837-P</code>
+</td>
+<td class="px-6 py-5 text-blue-100 text-sm font-light">Ultimate Beneficial Owner Map</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 w-fit">
+<div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+<span class="text-[9px] font-black uppercase tracking-widest text-emerald-400">Success</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-400 text-xs">Yesterday</td>
+<td class="px-6 py-5 text-right font-mono text-xs text-slate-300">04:12</td>
+<td class="px-6 py-5 text-right">
+<button class="text-slate-600 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 7: SUCCESS -->
+<tr class="group hover:bg-white/[0.02] transition-all duration-300">
+<td class="px-6 py-5">
+<code class="text-xs font-mono text-slate-400 tracking-tight">#RUN-8836-Z</code>
+</td>
+<td class="px-6 py-5 text-blue-100 text-sm font-light">Risk Scoring Engine</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 w-fit">
+<div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+<span class="text-[9px] font-black uppercase tracking-widest text-emerald-400">Success</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-400 text-xs">Yesterday</td>
+<td class="px-6 py-5 text-right font-mono text-xs text-slate-300">02:22</td>
+<td class="px-6 py-5 text-right">
+<button class="text-slate-600 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 8: PENDING -->
+<tr class="group hover:bg-white/[0.02] transition-all duration-300">
+<td class="px-6 py-5">
+<code class="text-xs font-mono text-slate-400 tracking-tight">#RUN-8835-Q</code>
+</td>
+<td class="px-6 py-5 text-blue-100 text-sm font-light">Sanctions Scan v4</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-500/10 border border-slate-500/20 w-fit">
+<div class="w-1.5 h-1.5 rounded-full bg-slate-500"></div>
+<span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Pending</span>
+</div>
+</td>
+<td class="px-6 py-5 text-slate-400 text-xs italic">just now</td>
+<td class="px-6 py-5 text-right font-mono text-xs text-slate-500">--:--</td>
+<td class="px-6 py-5 text-right">
+<button class="text-slate-600 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination / Footer -->
+<div class="p-6 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+<span class="text-[10px] uppercase tracking-widest text-slate-500">Showing 8 of 2,492 runs</span>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded border border-white/10 text-slate-500 hover:text-blue-100 hover:bg-white/5 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-primary/40 bg-primary/10 text-primary text-[10px] font-bold">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-white/10 text-slate-500 hover:text-blue-100 hover:bg-white/5 transition-all text-[10px] font-bold">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-white/10 text-slate-500 hover:text-blue-100 hover:bg-white/5 transition-all text-[10px] font-bold">3</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-white/10 text-slate-500 hover:text-blue-100 hover:bg-white/5 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Contextual Insights Section -->
+<div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="bg-surface-container-low p-6 rounded-xl border border-white/5 flex flex-col gap-4">
+<span class="uppercase tracking-widest text-[9px] text-slate-500 font-bold">Success Velocity</span>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-light text-blue-100 tracking-tighter">99.4%</span>
+<span class="text-emerald-400 text-[10px] font-bold mb-1">+0.2%</span>
+</div>
+<div class="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 w-[99.4%]"></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border border-white/5 flex flex-col gap-4">
+<span class="uppercase tracking-widest text-[9px] text-slate-500 font-bold">Average Duration</span>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-light text-blue-100 tracking-tighter">2:18</span>
+<span class="text-slate-500 text-[10px] font-bold mb-1">SEC/RUN</span>
+</div>
+<div class="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[65%]"></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border border-white/5 flex flex-col gap-4">
+<span class="uppercase tracking-widest text-[9px] text-slate-500 font-bold">System Load</span>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-light text-blue-100 tracking-tighter">Optimized</span>
+<div class="mb-1.5 w-2 h-2 rounded-full bg-emerald-400"></div>
+</div>
+<div class="flex gap-1">
+<div class="h-1 bg-emerald-500/50 flex-1 rounded-full"></div>
+<div class="h-1 bg-emerald-500/50 flex-1 rounded-full"></div>
+<div class="h-1 bg-emerald-500/50 flex-1 rounded-full"></div>
+<div class="h-1 bg-white/5 flex-1 rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Ambient Mesh Accent -->
+<div class="fixed bottom-0 right-0 w-[600px] h-[600px] bg-primary/5 blur-[120px] rounded-full -mr-64 -mb-64 pointer-events-none z-0"></div>
+</main>
+</body></html>

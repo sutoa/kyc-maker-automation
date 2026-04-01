@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KYC Crew Builder - Agent Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b1326;
+            color: #dae2fd;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .pulse {
+            animation: pulse-animation 4s infinite ease-in-out;
+        }
+        @keyframes pulse-animation {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        .glass-panel {
+            background: rgba(11, 19, 38, 0.6);
+            backdrop-filter: blur(20px);
+            border: 0.5px solid rgba(159, 202, 255, 0.2);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(159, 202, 255, 0.1);
+            border-radius: 10px;
+        }
+        /* Background from SCREEN_16 */
+        .mesh-gradient-bg {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-color: #0b1326;
+            background-image: 
+                url('https://lh3.googleusercontent.com/aida-public/AB6AXuDpVub2y6GhMWdesQYRvsmvvCoNYoH62ruRIb2ssz7fzzJvDL7VWM_zoWj_FAlgMWEJHHFlgz_UK5LEV89I-AgC9LrftpPgJwpbZn_eJfLtY1inKHOXWJdvFP5NkHGR96G_ahEHzlKy2TqTxWer7EMj0JBDySNMOHRqjclXNC7ochGv3HzOJCbBDyIiGNg5_Kj1A3kfaIQVT5wZzBIta6AjNozMToTZQaNTe1wI20pXdsoVen3SeaZTNZQ57_9pENRInofmjdMqqcM'),
+                radial-gradient(at 0% 0%, rgba(159, 202, 255, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(192, 193, 255, 0.08) 0px, transparent 50%);
+            background-size: cover;
+            background-blend-mode: overlay;
+            opacity: 0.4;
+        }
+        .pulse-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: #9fcaff;
+            position: relative;
+        }
+        .pulse-dot::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: rgba(159, 202, 255, 0.4);
+            animation: pulse-ring 4s infinite ease-in-out;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(2.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "on-secondary-container": "#b0b2ff",
+                "primary-fixed-dim": "#9fcaff",
+                "on-tertiary-container": "#1c2b3c",
+                "secondary-container": "#3131c0",
+                "surface-container-highest": "#2d3449",
+                "on-tertiary-fixed-variant": "#39485a",
+                "on-surface-variant": "#c0c7d3",
+                "on-secondary-fixed": "#07006c",
+                "tertiary-fixed": "#d4e4fa",
+                "on-tertiary": "#233143",
+                "on-primary-fixed": "#001d37",
+                "surface-tint": "#9fcaff",
+                "on-primary-fixed-variant": "#00497e",
+                "surface-dim": "#0b1326",
+                "primary-fixed": "#d2e4ff",
+                "surface-container": "#171f33",
+                "outline-variant": "#414751",
+                "surface-container-high": "#222a3d",
+                "secondary-fixed-dim": "#c0c1ff",
+                "primary-container": "#4894e2",
+                "inverse-on-surface": "#283044",
+                "on-background": "#dae2fd",
+                "error": "#ffb4ab",
+                "on-primary": "#003259",
+                "inverse-surface": "#dae2fd",
+                "on-secondary-fixed-variant": "#2f2ebe",
+                "on-secondary": "#1000a9",
+                "on-surface": "#dae2fd",
+                "surface-container-low": "#131b2e",
+                "primary": "#9fcaff",
+                "on-primary-container": "#002b4e",
+                "tertiary-fixed-dim": "#b9c8de",
+                "on-error": "#690005",
+                "secondary": "#c0c1ff",
+                "tertiary": "#b9c8de",
+                "error-container": "#93000a",
+                "tertiary-container": "#8392a6",
+                "background": "#0b1326",
+                "surface-variant": "#2d3449",
+                "surface": "#0b1326",
+                "surface-bright": "#31394d",
+                "secondary-fixed": "#e1e0ff",
+                "on-tertiary-fixed": "#0d1c2d",
+                "on-error-container": "#ffdad6",
+                "outline": "#8b919c",
+                "surface-container-lowest": "#060e20",
+                "inverse-primary": "#0061a5"
+              },
+              fontFamily: {
+                "headline": ["Inter"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+            },
+          },
+        }
+    </script>
+</head>
+<body class="min-h-screen overflow-hidden">
+<div class="mesh-gradient-bg"></div>
+<!-- SideNavBar (Persistent Anchor) - Width 60 (240px) matching SCREEN_16 -->
+<aside class="h-screen w-60 fixed left-0 top-0 flex flex-col justify-between py-6 px-4 bg-[#0b1326] bg-gradient-to-b from-[#0b1326] to-[#121d33] shadow-[20px_0_40px_rgba(159,202,255,0.03)] z-50">
+<div class="space-y-10">
+<div class="px-2">
+<h1 class="text-lg font-bold tracking-tight text-[#9fcaff] uppercase">KYC Crew Builder</h1>
+<p class="text-[10px] uppercase tracking-[0.1em] font-medium mt-1 text-white/60">v2.4.0 Pulse Active</p>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">dashboard</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-[#9fcaff] bg-[#9fcaff]/10 border-r-2 border-[#9fcaff] transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]" data-weight="fill">smart_toy</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Agents</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">account_tree</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Workflows</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">play_circle</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Runs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-[#c0c1ff] hover:bg-[#9fcaff]/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">settings</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Settings</span>
+</a>
+</nav>
+</div>
+<div class="space-y-1 pt-6 border-t border-[#414751]/20">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">account_circle</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Profile</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-slate-500 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined text-[1.2rem]">help_outline</span>
+<span class="text-[10px] uppercase tracking-[0.1em] font-semibold">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-60 flex h-screen">
+<!-- Left Panel: Agent List (320px) -->
+<section class="w-[320px] flex flex-col border-r border-outline-variant/10 bg-[#0b1326]/40 backdrop-blur-md">
+<div class="p-6 space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="text-xl font-light tracking-widest uppercase text-primary">Agents</h2>
+<button class="bg-primary/20 hover:bg-primary/30 text-primary px-3 py-1.5 rounded text-[10px] font-bold tracking-wider uppercase border border-primary/30 transition-all active:scale-95">
+                    New Agent
+                </button>
+</div>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
+<input class="w-full bg-transparent border-b border-outline-variant/20 py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-primary/50 transition-colors placeholder:text-outline-variant" placeholder="Search agents..." type="text"/>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-4 pb-12 space-y-3">
+<!-- extractor (Active Card) -->
+<div class="p-4 rounded-xl glass-panel bg-gradient-to-l from-primary/10 to-transparent border-primary/40 cursor-pointer group transition-all duration-300">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-bold text-primary tracking-wide">extractor</span>
+<span class="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/20 font-bold uppercase tracking-widest">LLM</span>
+</div>
+<p class="text-[11px] text-on-surface-variant line-clamp-1 mb-3">KYC Document Extraction Specialist</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[12px] text-primary/60">memory</span>
+<span class="text-[10px] font-medium text-primary/60 tracking-tight">gpt-4o-mini</span>
+</div>
+</div>
+<!-- critic_1 -->
+<div class="p-4 rounded-xl border border-outline-variant/10 hover:border-primary/20 hover:bg-surface-container-high/40 cursor-pointer group transition-all duration-300">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-bold text-on-surface/80 tracking-wide group-hover:text-primary transition-colors">critic_1</span>
+<span class="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary/70 border border-primary/10 font-bold uppercase tracking-widest">LLM</span>
+</div>
+<p class="text-[11px] text-on-surface-variant/70 line-clamp-1 mb-3">Quality Control &amp; Validation</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[12px] text-outline">memory</span>
+<span class="text-[10px] font-medium text-outline tracking-tight">gpt-4o-mini</span>
+</div>
+</div>
+<!-- reconciler -->
+<div class="p-4 rounded-xl border border-outline-variant/10 hover:border-primary/20 hover:bg-surface-container-high/40 cursor-pointer group transition-all duration-300">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-bold text-on-surface/80 tracking-wide group-hover:text-primary transition-colors">reconciler</span>
+<span class="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary/70 border border-primary/10 font-bold uppercase tracking-widest">LLM</span>
+</div>
+<p class="text-[11px] text-on-surface-variant/70 line-clamp-1 mb-3">Entity Resolution Expert</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[12px] text-outline">memory</span>
+<span class="text-[10px] font-medium text-outline tracking-tight">gpt-4o-mini</span>
+</div>
+</div>
+<!-- validator -->
+<div class="p-4 rounded-xl border border-outline-variant/10 hover:border-primary/20 hover:bg-surface-container-high/40 cursor-pointer group transition-all duration-300">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-bold text-on-surface/80 tracking-wide group-hover:text-primary transition-colors">validator</span>
+<span class="text-[9px] px-1.5 py-0.5 rounded bg-secondary-container/20 text-on-secondary-container border border-on-secondary-container/20 font-bold uppercase tracking-widest">Rule</span>
+</div>
+<p class="text-[11px] text-on-surface-variant/70 line-clamp-1 mb-3">Schema Consistency Check</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[12px] text-outline">code</span>
+<span class="text-[10px] font-medium text-outline tracking-tight">Python 3.10</span>
+</div>
+</div>
+<!-- sanitizer -->
+<div class="p-4 rounded-xl border border-outline-variant/10 hover:border-primary/20 hover:bg-surface-container-high/40 cursor-pointer group transition-all duration-300">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-bold text-on-surface/80 tracking-wide group-hover:text-primary transition-colors">sanitizer</span>
+<span class="text-[9px] px-1.5 py-0.5 rounded bg-secondary-container/20 text-on-secondary-container border border-on-secondary-container/20 font-bold uppercase tracking-widest">Rule</span>
+</div>
+<p class="text-[11px] text-on-surface-variant/70 line-clamp-1 mb-3">PII Redaction Engine</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[12px] text-outline">shield</span>
+<span class="text-[10px] font-medium text-outline tracking-tight">Regex Pattern</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Panel: Agent Editor (Scrollable) -->
+<section class="flex-1 flex flex-col bg-surface-container-lowest/20 backdrop-blur-sm relative">
+<header class="p-8 border-b border-outline-variant/5">
+<div class="flex items-center gap-4 mb-1">
+<span class="text-primary/40 font-mono text-xs uppercase tracking-tighter">Library / Agents /</span>
+<h3 class="text-2xl font-bold tracking-tight">extractor</h3>
+</div>
+<p class="text-sm text-on-surface-variant/60">Configuring the cognitive parameters for data extraction.</p>
+</header>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 space-y-12 pb-32">
+<!-- Identity Section -->
+<div class="space-y-6">
+<div class="flex items-center justify-between group cursor-pointer">
+<h4 class="text-xs font-bold tracking-[0.2em] uppercase text-primary flex items-center gap-3">
+<span class="material-symbols-outlined text-sm">person</span>
+                        Identity
+                    </h4>
+<span class="material-symbols-outlined text-outline transition-transform group-hover:text-primary">expand_more</span>
+</div>
+<div class="grid grid-cols-1 gap-8 ml-6">
+<div class="space-y-2">
+<label class="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant">Role</label>
+<input class="w-full bg-transparent border-b border-outline-variant/20 py-2 text-sm focus:outline-none focus:border-primary/50 transition-colors" type="text" value="KYC Document Extraction Specialist"/>
+</div>
+<div class="space-y-2">
+<label class="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant">Goal</label>
+<input class="w-full bg-transparent border-b border-outline-variant/20 py-2 text-sm focus:outline-none focus:border-primary/50 transition-colors" type="text" value="Extract all person records, IDs, and financial history from scanned PDFs with 99.9% accuracy."/>
+</div>
+<div class="space-y-2">
+<label class="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant">Backstory</label>
+<textarea class="w-full bg-surface-container/30 border border-outline-variant/10 rounded-lg p-3 text-sm focus:outline-none focus:border-primary/50 transition-colors resize-none" rows="4">You are a meticulous data architect with expertise in international KYC compliance. You possess a near-perfect ability to identify hidden text in unstructured data and normalize multiple date formats. Your tone is technical, concise, and professional.</textarea>
+</div>
+</div>
+</div>
+<!-- Execution Section -->
+<div class="space-y-6">
+<div class="flex items-center justify-between group cursor-pointer">
+<h4 class="text-xs font-bold tracking-[0.2em] uppercase text-primary flex items-center gap-3">
+<span class="material-symbols-outlined text-sm">bolt</span>
+                        Execution
+                    </h4>
+<span class="material-symbols-outlined text-outline">expand_more</span>
+</div>
+<div class="ml-6 space-y-8">
+<!-- Toggle Tabs -->
+<div class="flex p-1 bg-surface-container-high/50 rounded-lg w-fit">
+<button class="px-6 py-1.5 rounded bg-primary-container text-on-primary-container text-[10px] font-bold uppercase tracking-widest shadow-lg">LLM</button>
+<button class="px-6 py-1.5 rounded text-on-surface-variant/60 text-[10px] font-bold uppercase tracking-widest hover:text-on-surface transition-colors">Rule</button>
+</div>
+<div class="grid grid-cols-2 gap-x-12 gap-y-8">
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<label class="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant">Model</label>
+<span class="text-[9px] bg-outline-variant/20 text-outline-variant px-1.5 py-0.5 rounded font-bold uppercase tracking-widest">Inherited</span>
+</div>
+<select class="w-full bg-transparent border-b border-outline-variant/20 py-2 text-sm focus:outline-none focus:border-primary/50 appearance-none">
+<option>openai/gpt-4o-mini</option>
+<option>openai/gpt-4o</option>
+<option>anthropic/claude-3-sonnet</option>
+</select>
+</div>
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<label class="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant">Temperature</label>
+<span class="text-[9px] bg-outline-variant/20 text-outline-variant px-1.5 py-0.5 rounded font-bold uppercase tracking-widest">Inherited</span>
+</div>
+<div class="flex items-center gap-4 py-2">
+<input class="flex-1 accent-primary h-1 bg-outline-variant/20 rounded-lg" max="1" min="0" step="0.1" type="range" value="0"/>
+<span class="text-xs font-mono text-primary">0.0</span>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<label class="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant">Max Tokens</label>
+<span class="text-[9px] bg-outline-variant/20 text-outline-variant px-1.5 py-0.5 rounded font-bold uppercase tracking-widest">Inherited</span>
+</div>
+<input class="w-full bg-transparent border-b border-outline-variant/20 py-2 text-sm focus:outline-none focus:border-primary/50 transition-colors" type="number" value="16384"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Retry Section (Collapsed) -->
+<div class="space-y-6 opacity-60 hover:opacity-100 transition-opacity">
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-3">
+<h4 class="text-xs font-bold tracking-[0.2em] uppercase text-primary flex items-center gap-3">
+<span class="material-symbols-outlined text-sm">history</span>
+                            Retry
+                        </h4>
+<span class="text-[9px] bg-outline-variant/20 text-outline-variant px-2 py-0.5 rounded font-bold uppercase tracking-widest">All inherited from defaults</span>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</div>
+</div>
+<!-- Prompt Section -->
+<div class="space-y-6">
+<div class="flex items-center justify-between group cursor-pointer">
+<h4 class="text-xs font-bold tracking-[0.2em] uppercase text-primary flex items-center gap-3">
+<span class="material-symbols-outlined text-sm">description</span>
+                        Prompt
+                    </h4>
+<span class="material-symbols-outlined text-outline">expand_more</span>
+</div>
+<div class="ml-6 space-y-6">
+<div class="flex p-1 bg-surface-container-high/50 rounded-lg w-fit">
+<button class="px-6 py-1.5 rounded text-on-surface-variant/60 text-[10px] font-bold uppercase tracking-widest hover:text-on-surface transition-colors">Inline</button>
+<button class="px-6 py-1.5 rounded bg-primary-container text-on-primary-container text-[10px] font-bold uppercase tracking-widest shadow-lg">File</button>
+</div>
+<div class="flex items-center gap-3 bg-surface-container/50 border border-outline-variant/10 p-3 rounded-lg group">
+<span class="material-symbols-outlined text-primary/60">terminal</span>
+<span class="text-xs font-mono text-on-surface/80">../prompts/extractor.md</span>
+<button class="ml-auto text-[10px] font-bold text-primary uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Edit File</button>
+</div>
+</div>
+</div>
+<!-- I/O Keys Section -->
+<div class="space-y-6">
+<div class="flex items-center justify-between group cursor-pointer">
+<h4 class="text-xs font-bold tracking-[0.2em] uppercase text-primary flex items-center gap-3">
+<span class="material-symbols-outlined text-sm">input</span>
+                        I/O Keys
+                    </h4>
+<span class="material-symbols-outlined text-outline">expand_more</span>
+</div>
+<div class="ml-6 grid grid-cols-2 gap-12">
+<div class="space-y-3">
+<label class="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant">Input Keys</label>
+<div class="flex flex-wrap gap-2">
+<span class="bg-primary/10 border border-primary/20 text-primary px-2.5 py-1 rounded-full text-[10px] font-mono flex items-center gap-2">
+                                documents <span class="material-symbols-outlined text-[12px] cursor-pointer">close</span>
+</span>
+<span class="bg-primary/10 border border-primary/20 text-primary px-2.5 py-1 rounded-full text-[10px] font-mono flex items-center gap-2">
+                                extraction_feedback <span class="material-symbols-outlined text-[12px] cursor-pointer">close</span>
+</span>
+<button class="border border-dashed border-outline-variant/30 text-outline-variant px-2.5 py-1 rounded-full text-[10px] font-mono hover:border-primary/50 hover:text-primary transition-colors">+ Add</button>
+</div>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<label class="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant">Output Key</label>
+<input class="w-full bg-transparent border-b border-outline-variant/20 py-2 text-xs font-mono text-primary focus:outline-none focus:border-primary/50 transition-colors" type="text" value="extracted_persons"/>
+</div>
+<div class="space-y-2">
+<label class="text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant">Retry Count Key</label>
+<input class="w-full bg-transparent border-b border-outline-variant/20 py-2 text-xs font-mono text-primary focus:outline-none focus:border-primary/50 transition-colors" type="text" value="extraction_retry_count"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer -->
+<footer class="absolute bottom-0 left-0 right-0 glass-panel border-t border-primary/20 p-6 flex items-center gap-4">
+<button class="bg-primary text-on-primary px-8 py-2 rounded font-bold text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(159,202,255,0.3)]">Save Changes</button>
+<button class="border border-outline-variant/30 text-on-surface-variant px-8 py-2 rounded font-bold text-xs uppercase tracking-widest hover:bg-surface-container transition-all">Cancel</button>
+<button class="ml-auto text-error hover:text-error/80 px-4 py-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-sm">delete</span>
+                Delete Agent
+            </button>
+</footer>
+</section>
+</main>
+</body></html>

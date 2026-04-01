@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #0b1326; color: #dae2fd; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel {
+            background: rgba(11, 19, 38, 0.6);
+            backdrop-filter: blur(20px);
+            border: 0.5px solid rgba(159, 202, 255, 0.2);
+        }
+        .active-glow {
+            box-shadow: 0 0 15px rgba(159, 202, 255, 0.3);
+        }
+        .pulse-ring {
+            animation: pulse 4s infinite ease-in-out;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+            100% { opacity: 0.3; transform: scale(1); }
+        }
+        .mesh-bg {
+            background-image: radial-gradient(at 0% 0%, rgba(159, 202, 255, 0.05) 0px, transparent 50%),
+                              radial-gradient(at 100% 100%, rgba(192, 193, 255, 0.05) 0px, transparent 50%);
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline-variant": "#414751",
+                        "surface-container-highest": "#2d3449",
+                        "surface-bright": "#31394d",
+                        "background": "#0b1326",
+                        "primary": "#9fcaff",
+                        "secondary": "#c0c1ff",
+                        "surface": "#0b1326",
+                        "surface-container": "#171f33",
+                        "surface-container-low": "#131b2e",
+                        "surface-container-high": "#222a3d",
+                        "on-surface": "#dae2fd",
+                        "on-surface-variant": "#c0c7d3"
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface overflow-hidden mesh-bg h-screen flex">
+<!-- SideNavBar (JSON Derived) -->
+<aside class="fixed left-0 top-0 h-full flex flex-col z-40 bg-[#0b1326] bg-gradient-to-r from-[#0b1326] to-[#131d33] w-20 md:w-64 shadow-[40px_0_40px_rgba(159,202,255,0.06)]">
+<div class="p-6">
+<h1 class="text-[#9fcaff] font-bold tracking-tighter text-xl">KYC Architect</h1>
+<p class="text-[10px] uppercase tracking-[0.1em] text-[#414751] font-light mt-1">KYC Workflow v2.4</p>
+</div>
+<nav class="flex-1 px-4 space-y-2 mt-4">
+<div class="flex items-center gap-4 px-4 py-3 text-[#414751] hover:text-[#c0c1ff] transition-colors duration-500 rounded-lg group">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="hidden md:block text-[10px] uppercase tracking-[0.1em]">Dashboard</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 text-[#414751] hover:text-[#c0c1ff] transition-colors duration-500 rounded-lg group">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="hidden md:block text-[10px] uppercase tracking-[0.1em]">Agents</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 text-[#414751] hover:text-[#c0c1ff] transition-colors duration-500 rounded-lg group">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="hidden md:block text-[10px] uppercase tracking-[0.1em]">Workflows</span>
+</div>
+<!-- ACTIVE TAB: Runs -->
+<div class="flex items-center gap-4 px-4 py-3 text-[#9fcaff] bg-[#9fcaff]/10 border-r-2 border-[#9fcaff] font-medium rounded-lg">
+<span class="material-symbols-outlined">play_circle</span>
+<span class="hidden md:block text-[10px] uppercase tracking-[0.1em]">Runs</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 text-[#414751] hover:text-[#c0c1ff] transition-colors duration-500 rounded-lg group">
+<span class="material-symbols-outlined">settings</span>
+<span class="hidden md:block text-[10px] uppercase tracking-[0.1em]">Settings</span>
+</div>
+</nav>
+<div class="p-6 border-t border-outline-variant/10">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="professional portrait of a high-end kyc systems engineer in a clean tech environment with subtle blue lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDNNbusQw7JgVbwfDAVWjRVf-btsKsZn4auBrehPbTR6uQy88-8xzJDeOCRohniywa5Jwi5l5DKLDZi5FRJw16IiFPDi6yamCQTyZgYWE9FhKhzV_MbwTS4OvZqAUMwU-1k_z9inzUd-vAeJI3zxFqFZ0rR77zznW02m_vjMAGY-sxwwzqjPfWo09QYHpjBgHq4n0WFC0mVrE-tVufJ9paObWx9K3YkZ-nLKN8tI3lAdsFkrNtnjUaPoSnvnScv-J3qBGciETQYNI"/>
+</div>
+<div class="hidden md:block">
+<p class="text-[10px] uppercase font-bold text-primary tracking-widest">KYC Engineer</p>
+<p class="text-[9px] text-outline">Session Active</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-20 md:ml-64 flex flex-col relative h-screen">
+<!-- TopAppBar (JSON Derived Shell) -->
+<header class="fixed top-0 right-0 left-0 md:left-64 z-30 flex justify-between items-center px-8 h-16 bg-[#0b1326]/60 backdrop-blur-xl border-b-[0.5px] border-[#9fcaff]/20">
+<div class="flex items-center gap-6">
+<a class="flex items-center gap-2 text-outline hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-sm">arrow_back</span>
+<span class="text-[10px] uppercase tracking-widest font-medium">Back to Runs</span>
+</a>
+<div class="h-4 w-[1px] bg-outline-variant/30"></div>
+<div class="flex flex-col">
+<span class="text-primary font-light tracking-wide text-lg">KYC Document Processing</span>
+<span class="text-[10px] font-mono text-outline-variant tracking-tighter">run-2024-03-29-14:32</span>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<div class="flex flex-col items-end">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary pulse-ring"></span>
+<span class="text-[10px] uppercase font-bold text-primary tracking-widest">In Progress</span>
+</div>
+<div class="flex gap-4 text-[10px] text-outline mt-0.5">
+<span>Started: 2 min ago</span>
+<span>Duration: 2m 14s</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-outline">
+<span class="material-symbols-outlined text-lg hover:text-primary cursor-pointer">notifications</span>
+<span class="material-symbols-outlined text-lg hover:text-primary cursor-pointer">help_outline</span>
+</div>
+</div>
+</header>
+<!-- Main Workspace Split -->
+<div class="flex-1 flex mt-16 pb-[180px] overflow-hidden">
+<!-- Left: Execution Diagram (60%) -->
+<section class="w-[60%] relative border-r-[0.5px] border-outline-variant/10 overflow-hidden flex flex-col items-center justify-center p-12">
+<!-- Grid Lines Aesthetic -->
+<div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: radial-gradient(#9fcaff 0.5px, transparent 0.5px); background-size: 30px 30px;"></div>
+<div class="relative flex flex-col items-center gap-12 w-full max-w-xs">
+<!-- Node: Start -->
+<div class="w-full flex flex-col items-center group">
+<div class="w-48 p-4 rounded-lg bg-surface-container-low border border-outline-variant/20 flex items-center justify-between opacity-60">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">play_arrow</span>
+<span class="text-[10px] uppercase tracking-widest text-on-surface">__start__</span>
+</div>
+<span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+</div>
+<div class="h-12 w-[1px] bg-gradient-to-b from-primary/40 to-primary/10"></div>
+</div>
+<!-- Node: Extractor -->
+<div class="w-full flex flex-col items-center">
+<div class="w-48 p-4 rounded-lg bg-surface-container-low border border-outline-variant/20 flex items-center justify-between opacity-60">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">description</span>
+<span class="text-[10px] uppercase tracking-widest text-on-surface">extractor</span>
+</div>
+<span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+</div>
+<div class="h-12 w-[1px] bg-gradient-to-b from-primary/40 to-primary/10"></div>
+</div>
+<!-- Node: Critic 1 -->
+<div class="w-full flex flex-col items-center">
+<div class="w-48 p-4 rounded-lg bg-surface-container-low border border-outline-variant/20 flex items-center justify-between opacity-60">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">security</span>
+<span class="text-[10px] uppercase tracking-widest text-on-surface">critic_1</span>
+</div>
+<span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+</div>
+<div class="h-12 w-[1px] bg-gradient-to-b from-primary/40 to-primary/40"></div>
+</div>
+<!-- Node: ACTIVE Reconciler -->
+<div class="w-full flex flex-col items-center relative">
+<!-- Glow Effect -->
+<div class="absolute -inset-4 bg-primary/10 blur-xl pulse-ring"></div>
+<div class="w-56 p-5 rounded-lg bg-primary/10 border-[0.5px] border-primary active-glow relative z-10 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">analytics</span>
+<div class="flex flex-col">
+<span class="text-[11px] uppercase tracking-[0.15em] font-bold text-primary">reconciler</span>
+<span class="text-[8px] text-primary/60 uppercase tracking-tighter">Processing...</span>
+</div>
+</div>
+<div class="animate-spin text-primary/60">
+<span class="material-symbols-outlined text-sm">progress_activity</span>
+</div>
+</div>
+<div class="h-12 w-[1px] bg-gradient-to-b from-primary/40 to-outline-variant/20"></div>
+</div>
+<!-- Node: Future (Critic 2) -->
+<div class="w-full flex flex-col items-center opacity-30">
+<div class="w-48 p-4 rounded-lg border border-dashed border-outline-variant/40 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">verified_user</span>
+<span class="text-[10px] uppercase tracking-widest">critic_2</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Canvas Controls -->
+<div class="absolute bottom-6 right-6 flex items-center gap-2">
+<button class="w-8 h-8 rounded-full glass-panel flex items-center justify-center hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-sm">zoom_in</span>
+</button>
+<button class="w-8 h-8 rounded-full glass-panel flex items-center justify-center hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-sm">zoom_out</span>
+</button>
+<button class="w-8 h-8 rounded-full glass-panel flex items-center justify-center hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-sm">center_focus_weak</span>
+</button>
+</div>
+</section>
+<!-- Right: Node Detail Panel (40%) -->
+<section class="w-[40%] bg-surface-container-low flex flex-col h-full overflow-hidden">
+<!-- Panel Header -->
+<div class="p-8 border-b border-outline-variant/10">
+<div class="flex items-center justify-between mb-2">
+<h2 class="text-xl font-light tracking-wide text-primary">reconciler</h2>
+<div class="px-2 py-0.5 rounded-full border border-primary/30 bg-primary/5">
+<span class="text-[9px] uppercase font-bold text-primary tracking-widest">In Progress</span>
+</div>
+</div>
+<p class="text-[10px] uppercase tracking-widest text-outline">Person Record Reconciliation Specialist</p>
+</div>
+<!-- Panel Tabs -->
+<div class="flex px-8 border-b border-outline-variant/10">
+<button class="py-4 px-2 border-b border-primary text-[10px] uppercase tracking-widest font-bold text-primary">Input</button>
+<button class="py-4 px-4 text-[10px] uppercase tracking-widest font-light text-outline hover:text-on-surface">Output</button>
+<button class="py-4 px-4 text-[10px] uppercase tracking-widest font-light text-outline hover:text-on-surface">Timing</button>
+<button class="py-4 px-4 text-[10px] uppercase tracking-widest font-light text-outline hover:text-on-surface">State</button>
+<button class="py-4 px-4 text-[10px] uppercase tracking-widest font-light text-outline hover:text-on-surface">Error</button>
+</div>
+<!-- Panel Content -->
+<div class="flex-1 overflow-y-auto p-8 no-scrollbar">
+<div class="space-y-8">
+<div>
+<div class="flex items-center justify-between mb-4">
+<label class="text-[9px] uppercase tracking-widest font-bold text-outline">Input JSON Payload</label>
+<button class="text-primary hover:text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">content_copy</span>
+<span class="text-[9px] uppercase">Copy</span>
+</button>
+</div>
+<pre class="glass-panel p-6 rounded-xl font-mono text-xs leading-relaxed text-secondary/80 overflow-x-auto">{
+  "extracted_persons": [
+    {
+      "name": "ALEXANDER VANCE",
+      "dob": "1984-05-12",
+      "nationality": "GBR",
+      "risk_score": 0.12
+    },
+    {
+      "name": "ALEX VANCE",
+      "dob": "MAY 1984",
+      "source": "EXTERNAL_RECORDS"
+    }
+  ],
+  "reconciliation_feedback": null,
+  "config": {
+    "strict_mode": true,
+    "fuzzy_matching": 0.85
+  }
+}</pre>
+</div>
+<div>
+<label class="text-[9px] uppercase tracking-widest font-bold text-outline mb-4 block">Streaming Output</label>
+<div class="glass-panel p-6 rounded-xl flex items-center justify-center h-32 border-dashed border-primary/20 bg-primary/5">
+<div class="flex flex-col items-center gap-4">
+<div class="flex items-center gap-2">
+<div class="w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+<div class="w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+<div class="w-1 h-1 bg-primary rounded-full animate-bounce"></div>
+</div>
+<span class="text-[10px] uppercase tracking-[0.2em] text-primary/60 font-medium">Waiting for node output...</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Bottom Timeline (Expanded 180px) -->
+<footer class="absolute bottom-0 left-0 right-0 h-[180px] bg-surface-container-lowest border-t border-outline-variant/10 p-8 z-20">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-4">
+<span class="text-[10px] uppercase font-bold tracking-widest text-on-surface">Execution Timeline</span>
+<span class="text-[9px] font-mono text-outline">Real-time pulse active</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[10px] uppercase tracking-widest text-outline">Step 4/7</span>
+</div>
+</div>
+<!-- Gantt Strip -->
+<div class="relative h-20 w-full glass-panel rounded-lg overflow-hidden flex items-center p-1">
+<div class="flex items-center h-full w-full gap-1 relative">
+<!-- Completed Span: Start -->
+<div class="h-12 w-[5%] bg-outline-variant/20 rounded flex items-center px-3 relative group">
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="text-[8px] font-mono text-outline truncate">START</span>
+</div>
+<!-- Completed Span: Extractor -->
+<div class="h-12 w-[25%] bg-outline-variant/20 rounded flex items-center px-3 relative group">
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="text-[8px] font-mono text-outline truncate">EXTRACTOR</span>
+</div>
+<!-- Completed Span: Critic 1 -->
+<div class="h-12 w-[15%] bg-outline-variant/20 rounded flex items-center px-3 relative group">
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="text-[8px] font-mono text-outline truncate">CRITIC_1</span>
+</div>
+<!-- ACTIVE Span: Reconciler -->
+<div class="h-12 w-[20%] bg-primary/20 border-y border-primary/40 rounded flex items-center px-3 relative">
+<div class="absolute right-0 top-0 bottom-0 w-1 bg-primary pulse-ring"></div>
+<span class="text-[8px] font-mono text-primary truncate font-bold">RECONCILER</span>
+</div>
+<!-- Future Span -->
+<div class="h-12 flex-1 bg-surface-container/20 border-[0.5px] border-dashed border-outline-variant/10 rounded"></div>
+<!-- Vertical NOW line -->
+<div class="absolute top-0 bottom-0 left-[65%] w-[1px] bg-primary/60 shadow-[0_0_8px_rgba(159,202,255,0.8)] z-10 flex flex-col items-center">
+<div class="px-2 py-0.5 bg-primary text-[#001d37] text-[8px] font-bold rounded-sm -mt-6">NOW</div>
+</div>
+</div>
+</div>
+<div class="flex justify-between mt-4">
+<div class="flex gap-12">
+<div class="flex flex-col">
+<span class="text-[8px] uppercase tracking-widest text-outline">Total Latency</span>
+<span class="text-[12px] font-mono text-primary">134.52s</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[8px] uppercase tracking-widest text-outline">Token Usage</span>
+<span class="text-[12px] font-mono text-primary">14.2k</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[8px] uppercase tracking-widest text-outline">Compute Units</span>
+<span class="text-[12px] font-mono text-primary">2.44</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<span class="text-[9px] text-outline italic">System processing at 98.4% capacity</span>
+<button class="px-4 py-1.5 glass-panel rounded-full hover:bg-surface-container-highest transition-all group">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xs text-error">stop_circle</span>
+<span class="text-[9px] uppercase tracking-widest font-bold text-on-surface">Abort Run</span>
+</div>
+</button>
+</div>
+</div>
+</footer>
+</main>
+</body></html>
