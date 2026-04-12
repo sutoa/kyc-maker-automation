@@ -65,9 +65,8 @@ def validate_extraction(
     """Validate extraction output using rule-based checks.
 
     This performs deterministic validation without LLM:
-    - Mandatory fields present
-    - Source references provided
-    - Page numbers valid
+    - Mandatory fields present (first_name, last_name, doc_name, page_number)
+    - Page numbers valid (>= 1)
 
     Args:
         extracted_persons: Persons to validate.
@@ -79,13 +78,16 @@ def validate_extraction(
     issues: list[ExtractionIssue] = []
 
     for person in extracted_persons:
+        # Use name as identifier (extraction_id no longer exists in flat model)
+        person_label = f"{person.first_name} {person.last_name}".strip() or "unknown"
+
         # Check mandatory first_name
         if not person.first_name or not person.first_name.strip():
             issues.append(
                 ExtractionIssue(
-                    extraction_id=person.extraction_id,
+                    extraction_id=person_label,
                     issue_type="missing_first_name",
-                    description=f"Person {person.extraction_id} has empty first_name",
+                    description=f"Person '{person_label}' has empty first_name",
                     severity="error",
                 )
             )
@@ -94,46 +96,34 @@ def validate_extraction(
         if not person.last_name or not person.last_name.strip():
             issues.append(
                 ExtractionIssue(
-                    extraction_id=person.extraction_id,
+                    extraction_id=person_label,
                     issue_type="missing_last_name",
-                    description=f"Person {person.extraction_id} has empty last_name",
+                    description=f"Person '{person_label}' has empty last_name",
                     severity="error",
                 )
             )
 
-        # Check source references
-        if not person.source_references:
+        # Check doc_name present
+        if not person.doc_name or not person.doc_name.strip():
             issues.append(
                 ExtractionIssue(
-                    extraction_id=person.extraction_id,
+                    extraction_id=person_label,
                     issue_type="missing_source",
-                    description=f"Person {person.extraction_id} has no source references",
+                    description=f"Person '{person_label}' has no doc_name",
                     severity="error",
                 )
             )
-        else:
-            # Check page numbers
-            for ref in person.source_references:
-                if ref.page_number < 1:
-                    issues.append(
-                        ExtractionIssue(
-                            extraction_id=person.extraction_id,
-                            issue_type="invalid_page_number",
-                            description=f"Person {person.extraction_id} has invalid page_number: {ref.page_number}",
-                            severity="error",
-                        )
-                    )
 
-                # Check confidence (warning only)
-                if ref.confidence is not None and ref.confidence < 0.7:
-                    issues.append(
-                        ExtractionIssue(
-                            extraction_id=person.extraction_id,
-                            issue_type="low_confidence",
-                            description=f"Person {person.extraction_id} has low confidence: {ref.confidence}",
-                            severity="warning",
-                        )
-                    )
+        # Check page_number valid (Pydantic enforces ge=1, but belt-and-suspenders)
+        if person.page_number < 1:
+            issues.append(
+                ExtractionIssue(
+                    extraction_id=person_label,
+                    issue_type="invalid_page_number",
+                    description=f"Person '{person_label}' has invalid page_number: {person.page_number}",
+                    severity="error",
+                )
+            )
 
     # Determine decision
     error_issues = [i for i in issues if i.severity == "error"]

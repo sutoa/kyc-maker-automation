@@ -16,7 +16,7 @@ from src.agents.critic import (
 )
 from src.core.state import MAX_RETRY_COUNT, WorkflowState, create_initial_state
 from src.models.enums import CriticDecision
-from src.models.person import ExtractedPerson, SourceReference
+from src.models.person import ExtractedPerson
 from src.services.document import DocumentInput, PageContent
 
 
@@ -35,22 +35,14 @@ def create_test_document() -> DocumentInput:
     )
 
 
-def create_valid_person(extraction_id: str = "ext1") -> ExtractedPerson:
+def create_valid_person(suffix: str = "") -> ExtractedPerson:
     """Create a valid extracted person with all mandatory fields."""
     return ExtractedPerson(
-        extraction_id=extraction_id,
         first_name="Hans",
-        last_name="Müller",
+        last_name=f"Müller{suffix}",
         job_title="Managing Director",
-        source_references=[
-            SourceReference(
-                document_id="doc1",
-                filename="doc1.pdf",
-                page_number=1,
-                extracted_text_snippet="Hans Müller, Geschäftsführer",
-                confidence=0.95,
-            )
-        ],
+        doc_name="doc1.pdf",
+        page_number=1,
     )
 
 
@@ -80,7 +72,7 @@ class TestCritic1InputContract:
 
     def test_input_with_multiple_persons(self):
         """Test input with multiple persons."""
-        persons = [create_valid_person("ext1"), create_valid_person("ext2")]
+        persons = [create_valid_person("1"), create_valid_person("2")]
         input_data = Critic1Input(
             extracted_persons=persons,
             retry_count=1,
@@ -138,9 +130,9 @@ class TestPassWhenAllFieldsPresent:
     def test_pass_with_multiple_valid_persons(self):
         """Test that multiple valid persons pass validation."""
         persons = [
-            create_valid_person("ext1"),
-            create_valid_person("ext2"),
-            create_valid_person("ext3"),
+            create_valid_person("1"),
+            create_valid_person("2"),
+            create_valid_person("3"),
         ]
         output = validate_extraction(persons, retry_count=0)
 
@@ -149,17 +141,11 @@ class TestPassWhenAllFieldsPresent:
     def test_pass_with_optional_fields_missing(self):
         """Test that missing optional fields still pass."""
         person = ExtractedPerson(
-            extraction_id="ext1",
             first_name="Hans",
             last_name="Müller",
-            # job_title, date_of_birth, etc. are optional
-            source_references=[
-                SourceReference(
-                    document_id="doc1",
-                    filename="doc1.pdf",
-                    page_number=1,
-                )
-            ],
+            # job_title, job_title_original are optional
+            doc_name="doc1.pdf",
+            page_number=1,
         )
         output = validate_extraction([person], retry_count=0)
 
@@ -178,20 +164,14 @@ class TestFailRetryOnMissingFields:
     """Contract test: fail_retry on missing fields."""
 
     def test_fail_retry_on_empty_first_name(self):
-        """Test fail_retry when first_name is empty."""
-        # Create person with whitespace-only first_name
-        # (Pydantic allows whitespace, but our validation catches it)
+        """Test fail_retry when first_name is whitespace-only."""
+        # Pydantic min_length=1 blocks empty string; whitespace passes Pydantic
+        # but our rule-based validator catches it
         person = ExtractedPerson(
-            extraction_id="ext1",
             first_name="   ",  # Whitespace only
             last_name="Müller",
-            source_references=[
-                SourceReference(
-                    document_id="doc1",
-                    filename="doc1.pdf",
-                    page_number=1,
-                )
-            ],
+            doc_name="doc1.pdf",
+            page_number=1,
         )
         output = validate_extraction([person], retry_count=0)
 
@@ -199,18 +179,12 @@ class TestFailRetryOnMissingFields:
         assert any(i.issue_type == "missing_first_name" for i in output.issues)
 
     def test_fail_retry_on_empty_last_name(self):
-        """Test fail_retry when last_name is empty."""
+        """Test fail_retry when last_name is whitespace-only."""
         person = ExtractedPerson(
-            extraction_id="ext1",
             first_name="Hans",
             last_name="   ",  # Whitespace only
-            source_references=[
-                SourceReference(
-                    document_id="doc1",
-                    filename="doc1.pdf",
-                    page_number=1,
-                )
-            ],
+            doc_name="doc1.pdf",
+            page_number=1,
         )
         output = validate_extraction([person], retry_count=0)
 
@@ -220,16 +194,10 @@ class TestFailRetryOnMissingFields:
     def test_fail_retry_provides_feedback(self):
         """Test that fail_retry provides actionable feedback."""
         person = ExtractedPerson(
-            extraction_id="ext1",
             first_name="   ",
             last_name="Müller",
-            source_references=[
-                SourceReference(
-                    document_id="doc1",
-                    filename="doc1.pdf",
-                    page_number=1,
-                )
-            ],
+            doc_name="doc1.pdf",
+            page_number=1,
         )
         output = validate_extraction([person], retry_count=0)
 
@@ -240,16 +208,10 @@ class TestFailRetryOnMissingFields:
     def test_fail_retry_when_retries_available(self):
         """Test that fail_retry is returned when retries are available."""
         person = ExtractedPerson(
-            extraction_id="ext1",
             first_name="   ",
             last_name="Müller",
-            source_references=[
-                SourceReference(
-                    document_id="doc1",
-                    filename="doc1.pdf",
-                    page_number=1,
-                )
-            ],
+            doc_name="doc1.pdf",
+            page_number=1,
         )
 
         # Test at various retry counts below max
@@ -264,16 +226,10 @@ class TestFailMaxAfterFourRetries:
     def test_fail_max_at_max_retries(self):
         """Test that fail_max is returned at max retry count."""
         person = ExtractedPerson(
-            extraction_id="ext1",
             first_name="   ",  # Invalid
             last_name="Müller",
-            source_references=[
-                SourceReference(
-                    document_id="doc1",
-                    filename="doc1.pdf",
-                    page_number=1,
-                )
-            ],
+            doc_name="doc1.pdf",
+            page_number=1,
         )
         output = validate_extraction([person], retry_count=MAX_RETRY_COUNT)
 
@@ -282,16 +238,10 @@ class TestFailMaxAfterFourRetries:
     def test_fail_max_above_max_retries(self):
         """Test that fail_max is returned above max retry count."""
         person = ExtractedPerson(
-            extraction_id="ext1",
             first_name="   ",
             last_name="Müller",
-            source_references=[
-                SourceReference(
-                    document_id="doc1",
-                    filename="doc1.pdf",
-                    page_number=1,
-                )
-            ],
+            doc_name="doc1.pdf",
+            page_number=1,
         )
         output = validate_extraction([person], retry_count=MAX_RETRY_COUNT + 1)
 

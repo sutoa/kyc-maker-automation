@@ -14,6 +14,33 @@ from pydantic import BaseModel, Field
 from .enums import CriticDecision, WorkflowStatus
 
 
+class ExtractionIssueSimple(BaseModel):
+    """A single extraction issue as reported by extractor_critic.
+
+    Matches the extractor_critic.md JSON example exactly.
+    """
+
+    first_name: str = Field(..., description="First name of person with issue")
+    last_name: str = Field(..., description="Last name of person with issue")
+    issue_description: str = Field(..., description="Description of the issue")
+    severity: Literal["error", "warning"] = Field(..., description="Issue severity")
+
+
+class ExtractorCriticFeedback(BaseModel):
+    """Output of the extractor_critic agent.
+
+    Matches the extractor_critic.md JSON example exactly.
+    """
+
+    status: Literal["pass", "fail"] = Field(
+        ..., description="pass if all records valid, fail otherwise"
+    )
+    issues: list[ExtractionIssueSimple] = Field(
+        default_factory=list, description="List of issues found"
+    )
+    feedback: str = Field(..., description="Constructive summary for the extractor")
+
+
 class WorkflowRun(BaseModel):
     """Represents a single execution of the KYC document processing pipeline."""
 

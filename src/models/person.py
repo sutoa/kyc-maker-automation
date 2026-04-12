@@ -31,22 +31,20 @@ class SourceReference(BaseModel):
 
 
 class ExtractedPerson(BaseModel):
-    """A person extracted from source documents before deduplication."""
+    """A person extracted from source documents.
 
-    extraction_id: str = Field(..., description="Temporary ID for this extraction")
-    first_name: str = Field(..., min_length=1, description="Mandatory first name")
-    last_name: str = Field(..., min_length=1, description="Mandatory last name")
+    Fields match the extractor.md JSON example exactly so LLM output
+    maps directly to Pydantic validation with no post-processing.
+    """
+
+    first_name: str = Field(..., min_length=1, description="Person's given name")
+    last_name: str = Field(..., min_length=1, description="Person's family name")
     job_title: str | None = Field(None, description="Job title in English")
     job_title_original: str | None = Field(
-        None, description="Original language job title (e.g., Geschäftsführer)"
+        None, description="Original language job title (e.g. Geschäftsführer)"
     )
-    date_of_birth: date | None = Field(None, description="Date of birth")
-    nationality: str | None = Field(None, description="Nationality")
-    address: str | None = Field(None, description="Address")
-    other_info: dict = Field(default_factory=dict, description="Additional fields")
-    source_references: list[SourceReference] = Field(
-        ..., min_length=1, description="At least one source reference required"
-    )
+    doc_name: str = Field(..., description="Source document filename")
+    page_number: int = Field(..., ge=1, description="Page where person was found")
 
 
 class FieldConflict(BaseModel):
