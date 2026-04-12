@@ -260,14 +260,22 @@ def validate_workflows_config(
             "message": f"Entry point '{entry_point}' not found in nodes",
         })
 
-    # Every agent-type node must reference a known agent
+    # Every agent-type node must reference a known agent;
+    # router-type nodes must declare 'fn'
     for node_name, node_def in nodes.items():
-        if node_def.get("type") == "agent":
+        node_type = node_def.get("type")
+        if node_type == "agent":
             agent_key = node_def.get("agent")
             if agent_key and agent_key not in agents:
                 errors.append({
                     "path": f"nodes.{node_name}.agent",
                     "message": f"Agent '{agent_key}' not found in agents config",
+                })
+        elif node_type == "router":
+            if not node_def.get("fn"):
+                errors.append({
+                    "path": f"nodes.{node_name}.fn",
+                    "message": "Router nodes must have 'fn' (dotted Python path)",
                 })
 
     # Every edge target must resolve to a valid node
@@ -582,8 +590,8 @@ def build_agent_functions(
 
     for node_name, node_def in nodes.items():
         node_type = node_def.get("type")
-        if node_type == "end":
-            continue
+        if node_type in ("end", "router"):
+            continue  # router nodes are wired directly by the workflow engine
 
         agent_key = node_def.get("agent", node_name)
         effective_cfg = get_effective_agent_config(agent_key, agents_config)
