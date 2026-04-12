@@ -17,6 +17,10 @@ that LangGraph maps to the next node via the condition.routes block.
 """
 
 import logging
+from typing import Literal
+
+from langgraph.graph import END
+from langgraph.types import Command
 
 from src.core.state import WorkflowState
 from src.models.enums import CriticDecision
@@ -66,3 +70,37 @@ def route_on_critic_decision(state: WorkflowState) -> str:
         return "fail_max"
 
     return route
+
+
+def route_on_extractor_critic_decision(
+    state: WorkflowState,
+) -> "Command[Literal['formatter', 'extractor', END]]":
+    """Router node function for the extractor critic loop.
+
+    Reads extractor_critic_feedback from state. On pass, routes to formatter.
+    On fail, increments extraction_retry_count and routes back to extractor.
+    On fail with retry count >= 4, routes to END.
+
+    Returns a Command so routing and state update happen atomically.
+    """
+    feedback = state.get("extractor_critic_feedback")
+    retry_count = state.get("extraction_retry_count", 0) or 0
+
+    if feedback is None or getattr(feedback, "status", "pass") == "pass":
+        return Command(goto="formatter")
+
+    if retry_count >= 4:
+        logger.info(
+            f"[{state.get('workflow_id', 'unknown')}] "
+            "extractor_critic_router: max retries reached → END"
+        )
+        return Command(goto=END)
+
+    logger.info(
+        f"[{state.get('workflow_id', 'unknown')}] "
+        f"extractor_critic_router: fail_retry #{retry_count + 1} → extractor"
+    )
+    return Command(
+        goto="extractor",
+        update={"extraction_retry_count": retry_count + 1},
+    )
