@@ -16,7 +16,7 @@ import os
 from datetime import datetime
 from typing import Any, Callable
 
-from langgraph.graph import END, StateGraph
+from langgraph.graph import END, START, StateGraph
 
 from src.config.loader import (
     build_agent_functions,
@@ -83,14 +83,14 @@ class WorkflowError(Exception):
 def create_agent_node(
     agent_name: str,
     agent_fn: AgentFunction,
-    next_agent: str | None = None,
+    retry_count_key: str | None = None,
 ) -> Callable[[WorkflowState], WorkflowState]:
     """Create a wrapped agent node with logging and state updates.
 
     Args:
         agent_name: Name of the agent (for logging).
         agent_fn: The actual agent function to execute.
-        next_agent: Name of the next agent (for state update).
+        retry_count_key: State key holding this agent's retry count (read for logging).
 
     Returns:
         Wrapped function that handles logging, timing, and state updates.
@@ -98,7 +98,7 @@ def create_agent_node(
 
     def wrapped_agent(state: WorkflowState) -> WorkflowState:
         workflow_id = state.get("workflow_id", "unknown")
-        retry_count = state.get("extraction_retry_count") or state.get("reconciliation_retry_count") or state.get("classification_retry_count") or 0
+        retry_count = state.get(retry_count_key, 0) if retry_count_key else 0
 
         logger.info(
             f"[{workflow_id}] Starting agent: {agent_name} (retry: {retry_count})"
@@ -167,12 +167,6 @@ def create_agent_node(
                         )
                 except Exception as e:
                     logger.warning(f"Failed to log agent_completed to audit: {e}")
-
-            # Update current agent to next if specified
-            if next_agent:
-                new_state = WorkflowState(
-                    **{**new_state, "current_agent": next_agent}
-                )
 
             return new_state
 
@@ -281,28 +275,27 @@ def build_workflow_graph(
         if node_def.get("type") == "end":
             continue  # end nodes handled via add_edge(..., END)
 
+        if node_def.get("type") == "router":
+            routing_fn = resolve_callable(node_def["fn"])
+            graph.add_node(node_name, routing_fn)
+            continue
+
         agent_fn = functions.get(node_name)
         if agent_fn is None:
             raise ValueError(
                 f"Node '{node_name}' has no matching function in the provided functions dict"
             )
-        wrapped = create_agent_node(node_name, agent_fn)
+        retry_count_key = node_def.get("retry_count_key")
+        wrapped = create_agent_node(node_name, agent_fn, retry_count_key=retry_count_key)
         graph.add_node(node_name, wrapped)
-
-    # --- Set entry point from YAML ---
-    entry_point = workflow_meta.get("entry_point", "__start__")
-    if entry_point == "__start__":
-        for edge in edges_cfg:
-            if edge.get("from") == "__start__" and "to" in edge:
-                graph.set_entry_point(edge["to"])
-                break
-    else:
-        graph.set_entry_point(entry_point)
 
     # --- Add edges from YAML ---
     for edge in edges_cfg:
         from_node = edge.get("from")
+
         if from_node == "__start__":
+            if "to" in edge:
+                graph.add_edge(START, edge["to"])
             continue
 
         if "to" in edge:
@@ -511,115 +504,12 @@ def run_workflow_sync(
     compiled_workflow: Any,
     initial_state: WorkflowState,
 ) -> WorkflowState:
-    """Execute the compiled workflow synchronously.
+    """Synchronous wrapper around run_workflow.
 
-    Args:
-        compiled_workflow: Compiled LangGraph workflow.
-        initial_state: Initial workflow state with documents.
-
-    Returns:
-        Final workflow state after completion or failure.
+    Prefer ``await run_workflow(...)`` in async contexts.
     """
-    workflow_id = initial_state.get("workflow_id", "unknown")
-    logger.info(f"[{workflow_id}] Starting workflow execution (sync)")
-    start_time = datetime.now()
-
-    # Mark workflow as started
-    state = update_workflow_started(initial_state)
-
-    # Log workflow_started to audit trail
-    documents = initial_state.get("documents", [])
-    if AUDIT_ENABLED:
-        try:
-            audit = _get_audit_service()
-            if audit:
-                audit.log_workflow_started(
-                    workflow_run_id=workflow_id,
-                    document_count=len(documents),
-                )
-        except Exception as e:
-            logger.warning(f"Failed to log workflow_started to audit: {e}")
-
-    try:
-        # Run the workflow
-        final_state = compiled_workflow.invoke(state)
-
-        # If the workflow ended via a FAIL_MAX critic decision, mark as failed
-        from src.models.enums import CriticDecision as _CriticDecision
-        last_fb = final_state.get("last_critic_feedback")
-        if (
-            final_state.get("status") not in ("completed", "failed")
-            and last_fb is not None
-            and getattr(last_fb, "decision", None) == _CriticDecision.FAIL_MAX
-        ):
-            reason = getattr(last_fb, "suggested_corrections", None) or "Maximum retries exceeded."
-            final_state = update_workflow_failed(final_state, reason, last_fb)
-
-        status = final_state.get("status", "unknown")
-        duration_seconds = (datetime.now() - start_time).total_seconds()
-        logger.info(f"[{workflow_id}] Workflow completed with status: {status}")
-
-        # Emit workflow completion event
-        if EVENTS_ENABLED and get_event_emitter:
-            try:
-                emitter = get_event_emitter(workflow_id)
-                if status == "completed":
-                    summary = _generate_workflow_summary(final_state)
-                    emitter.emit_workflow_completed(duration_seconds, summary)
-                elif status == "failed":
-                    error = final_state.get("failure_reason", "Unknown error")
-                    emitter.emit_workflow_failed(error)
-            except Exception as e:
-                logger.warning(f"Failed to emit workflow completion event: {e}")
-
-        # Log workflow completion to audit trail
-        if AUDIT_ENABLED:
-            try:
-                audit = _get_audit_service()
-                if audit:
-                    if status == "completed":
-                        summary = _generate_workflow_summary(final_state)
-                        audit.log_workflow_completed(
-                            workflow_run_id=workflow_id,
-                            duration_seconds=duration_seconds,
-                            csm_count=summary.get("csm_count", 0),
-                            non_csm_count=summary.get("non_csm_count", 0),
-                        )
-                    elif status == "failed":
-                        error = final_state.get("failure_reason", "Unknown error")
-                        audit.log_workflow_failed(
-                            workflow_run_id=workflow_id,
-                            error=error,
-                        )
-            except Exception as e:
-                logger.warning(f"Failed to log workflow completion to audit: {e}")
-
-        return final_state
-
-    except Exception as e:
-        logger.error(f"[{workflow_id}] Workflow execution failed: {e}", exc_info=True)
-        error_msg = f"Workflow execution failed: {str(e)}"
-        # Emit workflow_failed event
-        if EVENTS_ENABLED and get_event_emitter:
-            try:
-                emitter = get_event_emitter(workflow_id)
-                emitter.emit_workflow_failed(error_msg)
-            except Exception as emit_err:
-                logger.warning(f"Failed to emit workflow_failed event: {emit_err}")
-
-        # Log workflow_failed to audit trail
-        if AUDIT_ENABLED:
-            try:
-                audit = _get_audit_service()
-                if audit:
-                    audit.log_workflow_failed(
-                        workflow_run_id=workflow_id,
-                        error=error_msg,
-                    )
-            except Exception as audit_err:
-                logger.warning(f"Failed to log workflow_failed to audit: {audit_err}")
-
-        return update_workflow_failed(state, error_msg)
+    import asyncio
+    return asyncio.run(run_workflow(compiled_workflow, initial_state))
 
 
 def _generate_workflow_summary(state: WorkflowState) -> dict[str, Any]:
