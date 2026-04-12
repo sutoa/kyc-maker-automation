@@ -77,7 +77,7 @@ agents:
       always capturing job titles in both the original language and English translation.
       You never invent data — if a field is not present, you leave it null.
     execution: llm
-    input_keys: [documents]
+    input_keys: [documents, extractor_critic_feedback]
     output_key: extracted_persons
     output_schema:
       ref: src.models.person.ExtractedPerson

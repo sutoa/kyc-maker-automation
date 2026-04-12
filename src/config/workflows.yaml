@@ -67,6 +67,10 @@ nodes:
     type: agent
     agent: extractor_critic
 
+  extractor_critic_router:
+    type: router
+    fn: src.core.conditions.route_on_extractor_critic_decision
+
   # reconciler:
   #   type: agent
   #   agent: reconciler
@@ -113,17 +117,11 @@ edges:
 
   # ── Extraction phase ───────────────────────────────────────
   - from: extractor
-    to: extractor_critic
+    to: critic_1
 
-  # fn returns: "pass" | "fail_retry" | "fail_max"
-  - from: extractor_critic
-    condition:
-      fn: src.core.conditions.route_on_extractor_critic_decision
-      routes:
-        pass:       formatter
-        fail_retry: extractor
-        fail_max:   end
-        default:    end
+  - from: critic_1
+    to: extractor_critic_router
+  # extractor_critic_router returns Command(goto=...) — no further edges needed
 
   # # ── Reconciliation phase ───────────────────────────────────
   # - from: reconciler

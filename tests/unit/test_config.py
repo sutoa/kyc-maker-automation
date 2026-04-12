@@ -414,13 +414,10 @@ class TestGetWorkflowConfig:
 
 class TestGetEdgeRoutes:
     def test_get_critic_1_routes(self):
+        # critic_1 now goes unconditionally to extractor_critic_router;
+        # the router node itself (type: router) handles conditional logic via Command.
         routes = get_edge_routes("critic_1")
-        assert routes is not None
-        assert "pass" in routes
-        assert "fail_retry" in routes
-        assert "fail_max" in routes
-        assert routes["pass"] == "reconciler"
-        assert routes["fail_retry"] == "extractor"
+        assert routes is None  # no conditional edge from critic_1
 
     def test_get_critic_2_routes(self):
         routes = get_edge_routes("critic_2")
