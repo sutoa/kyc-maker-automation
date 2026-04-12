@@ -14,7 +14,8 @@ from src.agents.critic import (
     critic_1_agent,
     validate_extraction,
 )
-from src.core.state import MAX_RETRY_COUNT, WorkflowState, create_initial_state
+from src.agents.critic import MAX_RETRY_COUNT
+from src.core.state import WorkflowState, create_initial_state
 from src.models.enums import CriticDecision
 from src.models.person import ExtractedPerson
 from src.services.document import DocumentInput, PageContent

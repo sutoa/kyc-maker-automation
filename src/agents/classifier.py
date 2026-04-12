@@ -11,11 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from src.core.state import (
-    WorkflowState,
-    get_feedback,
-    update_classification_result,
-)
+from src.core.state import WorkflowState
 from src.models.person import (
     ClassifiedPerson,
     EvidenceReference,

@@ -13,7 +13,8 @@ from src.agents.critic import (
     critic_3_agent,
     validate_classification,
 )
-from src.core.state import MAX_RETRY_COUNT, WorkflowState, create_initial_state
+from src.agents.critic import MAX_RETRY_COUNT
+from src.core.state import WorkflowState, create_initial_state
 from src.models.enums import CriticDecision
 from src.models.person import ClassifiedPerson, EvidenceReference, SourceReference
 from src.services.document import DocumentInput, PageContent

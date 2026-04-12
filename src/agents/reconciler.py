@@ -11,11 +11,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from src.core.state import (
-    WorkflowState,
-    get_feedback,
-    update_reconciliation_result,
-)
+from src.core.state import WorkflowState
 from src.models.person import (
     DuplicateGroup,
     ExtractedPerson,

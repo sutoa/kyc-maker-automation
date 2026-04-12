@@ -13,7 +13,8 @@ from src.agents.critic import (
     critic_2_agent,
     validate_reconciliation,
 )
-from src.core.state import MAX_RETRY_COUNT, WorkflowState, create_initial_state
+from src.agents.critic import MAX_RETRY_COUNT
+from src.core.state import WorkflowState, create_initial_state
 from src.models.enums import CriticDecision
 from src.models.person import ReconciledPerson, SourceReference
 from src.services.document import DocumentInput, PageContent

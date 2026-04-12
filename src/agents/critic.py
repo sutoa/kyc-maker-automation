@@ -20,7 +20,10 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from src.core.state import MAX_RETRY_COUNT, WorkflowState, get_retry_count
+from src.core.state import WorkflowState
+
+# Retry limit matches agents.yaml defaults.retry.max_attempts
+MAX_RETRY_COUNT = 4
 from src.models.enums import CriticDecision
 from src.models.person import ClassifiedPerson, ExtractedPerson, ReconciledPerson
 from src.models.workflow import (
@@ -165,7 +168,7 @@ def critic_1_agent(state: WorkflowState) -> tuple[CriticDecision, str | None]:
     logger.info(f"[{workflow_id}] Critic 1 starting validation")
 
     extracted_persons = state.get("extracted_persons", [])
-    retry_count = get_retry_count(state, "extraction")
+    retry_count = state.get("extraction_retry_count", 0) or 0
 
     # Check if no persons extracted
     if not extracted_persons:
@@ -322,7 +325,7 @@ def critic_2_agent(state: WorkflowState) -> tuple[CriticDecision, str | None]:
 
     reconciled_persons = state.get("reconciled_persons", [])
     extracted_count = len(state.get("extracted_persons", []))
-    retry_count = get_retry_count(state, "reconciliation")
+    retry_count = state.get("reconciliation_retry_count", 0) or 0
 
     # Check if no persons reconciled
     if not reconciled_persons:
@@ -503,7 +506,7 @@ def critic_3_agent(state: WorkflowState) -> tuple[CriticDecision, str | None]:
     logger.info(f"[{workflow_id}] Critic 3 starting validation")
 
     classified_persons = state.get("classified_persons", [])
-    retry_count = get_retry_count(state, "classification")
+    retry_count = state.get("classification_retry_count", 0) or 0
 
     # Check if no persons classified
     if not classified_persons:

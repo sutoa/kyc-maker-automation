@@ -11,7 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from src.core.state import WorkflowState, update_final_output
+from src.core.state import WorkflowState
 from src.models.output import DocumentManifestEntry
 from src.models.person import ClassifiedPerson
 from src.services.document import DocumentInput

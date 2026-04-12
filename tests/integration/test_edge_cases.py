@@ -18,8 +18,6 @@ import pytest
 from src.core.state import (
     WorkflowState,
     create_initial_state,
-    update_extraction_result,
-    update_final_output,
 )
 from src.core.workflow import run_workflow_sync
 from src.models.output import DocumentManifestEntry

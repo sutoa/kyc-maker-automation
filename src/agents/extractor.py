@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from src.core.state import WorkflowState, get_feedback, update_extraction_result
+from src.core.state import WorkflowState
 from src.models.person import ExtractedPerson, SourceReference
 from src.services.document import DocumentInput
 
@@ -287,10 +287,10 @@ def extractor_agent(state: WorkflowState) -> WorkflowState:
     documents = state.get("documents", [])
     if not documents:
         logger.warning(f"[{workflow_id}] No documents to process")
-        return update_extraction_result(state, [])
+        return WorkflowState(**{**state, "extracted_persons": []})
 
     # Get retry feedback if any
-    retry_feedback = get_feedback(state, "extraction")
+    retry_feedback = state.get("extractor_critic_feedback")
 
     # Extract persons
     try:
@@ -298,12 +298,12 @@ def extractor_agent(state: WorkflowState) -> WorkflowState:
         logger.info(
             f"[{workflow_id}] Extracted {len(output.extracted_persons)} person(s)"
         )
-        return update_extraction_result(state, output.extracted_persons)
+        return WorkflowState(**{**state, "extracted_persons": output.extracted_persons})
 
     except Exception as e:
         logger.error(f"[{workflow_id}] Extraction failed: {e}", exc_info=True)
         # Return empty list on failure - critic will handle
-        return update_extraction_result(state, [])
+        return WorkflowState(**{**state, "extracted_persons": []})
 
 
 async def extractor_agent_async(state: WorkflowState) -> WorkflowState:
@@ -322,10 +322,10 @@ async def extractor_agent_async(state: WorkflowState) -> WorkflowState:
     documents = state.get("documents", [])
     if not documents:
         logger.warning(f"[{workflow_id}] No documents to process")
-        return update_extraction_result(state, [])
+        return WorkflowState(**{**state, "extracted_persons": []})
 
     # Get retry feedback if any
-    retry_feedback = get_feedback(state, "extraction")
+    retry_feedback = state.get("extractor_critic_feedback")
 
     # Extract persons
     try:
@@ -333,9 +333,9 @@ async def extractor_agent_async(state: WorkflowState) -> WorkflowState:
         logger.info(
             f"[{workflow_id}] Extracted {len(output.extracted_persons)} person(s)"
         )
-        return update_extraction_result(state, output.extracted_persons)
+        return WorkflowState(**{**state, "extracted_persons": output.extracted_persons})
 
     except Exception as e:
         logger.error(f"[{workflow_id}] Extraction failed: {e}", exc_info=True)
         # Return empty list on failure - critic will handle
-        return update_extraction_result(state, [])
+        return WorkflowState(**{**state, "extracted_persons": []})
