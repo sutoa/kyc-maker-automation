@@ -65,23 +65,23 @@ nodes:
 
   critic_1:
     type: agent
-    agent: critic_1
+    agent: extractor_critic
 
-  reconciler:
-    type: agent
-    agent: reconciler
+  # reconciler:
+  #   type: agent
+  #   agent: reconciler
 
-  critic_2:
-    type: agent
-    agent: critic_2
+  # critic_2:
+  #   type: agent
+  #   agent: critic_2
 
-  classifier:
-    type: agent
-    agent: classifier
+  # classifier:
+  #   type: agent
+  #   agent: classifier
 
-  critic_3:
-    type: agent
-    agent: critic_3
+  # critic_3:
+  #   type: agent
+  #   agent: critic_3
 
   formatter:
     type: agent
@@ -113,54 +113,45 @@ edges:
 
   # ── Extraction phase ───────────────────────────────────────
   - from: extractor
-    to: critic_1
+    to: extractor_critic
 
   # fn returns: "pass" | "fail_retry" | "fail_max"
-  - from: critic_1
+  - from: extractor_critic
     condition:
-      fn: src.core.conditions.route_on_critic_decision
+      fn: src.core.conditions.route_on_extractor_critic_decision
       routes:
-        pass:       reconciler
+        pass:       formatter
         fail_retry: extractor
         fail_max:   end
         default:    end
-    on_traverse:
-      when_route: fail_retry
-      increment_key: extraction_retry_count
 
-  # ── Reconciliation phase ───────────────────────────────────
-  - from: reconciler
-    to: critic_2
+  # # ── Reconciliation phase ───────────────────────────────────
+  # - from: reconciler
+  #   to: critic_2
 
-  # fn returns: "pass" | "fail_retry" | "fail_max"
-  - from: critic_2
-    condition:
-      fn: src.core.conditions.route_on_critic_decision
-      routes:
-        pass:       classifier
-        fail_retry: reconciler
-        fail_max:   end
-        default:    end
-    on_traverse:
-      when_route: fail_retry
-      increment_key: reconciliation_retry_count
+  # # fn returns: "pass" | "fail_retry" | "fail_max"
+  # - from: critic_2
+  #   condition:
+  #     fn: src.core.conditions.route_on_critic_decision
+  #     routes:
+  #       pass:       classifier
+  #       fail_retry: reconciler
+  #       fail_max:   end
+  #       default:    end
 
-  # ── Classification phase ───────────────────────────────────
-  - from: classifier
-    to: critic_3
+  # # ── Classification phase ───────────────────────────────────
+  # - from: classifier
+  #   to: critic_3
 
-  # fn returns: "pass" | "fail_retry" | "fail_max"
-  - from: critic_3
-    condition:
-      fn: src.core.conditions.route_on_critic_decision
-      routes:
-        pass:       formatter
-        fail_retry: classifier
-        fail_max:   end
-        default:    end
-    on_traverse:
-      when_route: fail_retry
-      increment_key: classification_retry_count
+  # # fn returns: "pass" | "fail_retry" | "fail_max"
+  # - from: critic_3
+  #   condition:
+  #     fn: src.core.conditions.route_on_critic_decision
+  #     routes:
+  #       pass:       formatter
+  #       fail_retry: classifier
+  #       fail_max:   end
+  #       default:    end
 
   # ── Output ─────────────────────────────────────────────────
   - from: formatter

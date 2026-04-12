@@ -77,9 +77,8 @@ agents:
       always capturing job titles in both the original language and English translation.
       You never invent data — if a field is not present, you leave it null.
     execution: llm
-    input_keys: [documents, extraction_feedback]
+    input_keys: [documents]
     output_key: extracted_persons
-    retry_count_key: extraction_retry_count
     output_schema:
       ref: src.models.person.ExtractedPerson
       is_list: true
@@ -87,7 +86,7 @@ agents:
       file: ../prompts/extractor.md
 
   # ── critic_1 ───────────────────────────────────────────────
-  critic_1:
+  extractor_critic:
     role: "Extraction Quality Auditor"
     goal: "Validate that every extracted person has mandatory fields and valid source references"
     backstory: |
@@ -96,102 +95,97 @@ agents:
       before they proceed to deduplication. You are fair but uncompromising on
       data completeness.
     execution: llm
-    input_keys: [extracted_persons, extraction_retry_count]
-    output_key: last_critic_feedback
+    input_keys: [extracted_persons]
+    output_key: extractor_critic_feedback
     output_schema:
-      ref: src.models.workflow.CriticFeedback
+      ref: src.models.workflow.ExtractorCriticFeedback
       is_list: false
     system_prompt:
-      file: ../prompts/critic_1.md
+      file: ../prompts/extractor_critic.md
 
-  # ── reconciler ─────────────────────────────────────────────
-  reconciler:
-    role: "Person Record Reconciliation Specialist"
-    goal: "Identify and merge duplicate person records using fuzzy name matching"
-    backstory: |
-      You are an expert in entity resolution and record linkage. You identify persons
-      appearing multiple times under slightly different names or formats, merge their
-      records into a single canonical entry, preserve all source references, and flag
-      any conflicting field values for downstream review.
-    execution: llm
-    input_keys: [extracted_persons, reconciliation_feedback]
-    output_key: reconciled_persons
-    retry_count_key: reconciliation_retry_count
-    matching_threshold: 0.85
-    output_schema:
-      ref: src.models.person.ReconciledPerson
-      is_list: true
-    system_prompt:
-      file: ../prompts/reconciler.md
+  # # ── reconciler ─────────────────────────────────────────────
+  # reconciler:
+  #   role: "Person Record Reconciliation Specialist"
+  #   goal: "Identify and merge duplicate person records using fuzzy name matching"
+  #   backstory: |
+  #     You are an expert in entity resolution and record linkage. You identify persons
+  #     appearing multiple times under slightly different names or formats, merge their
+  #     records into a single canonical entry, preserve all source references, and flag
+  #     any conflicting field values for downstream review.
+  #   execution: llm
+  #   input_keys: [extracted_persons, reconciliation_feedback]
+  #   output_key: reconciled_persons
+  #   retry_count_key: reconciliation_retry_count
+  #   matching_threshold: 0.85
+  #   output_schema:
+  #     ref: src.models.person.ReconciledPerson
+  #     is_list: true
+  #   system_prompt:
+  #     file: ../prompts/reconciler.md
 
-  # ── critic_2 ───────────────────────────────────────────────
-  critic_2:
-    role: "Reconciliation Quality Auditor"
-    goal: "Validate that deduplication is correct, complete, and preserves all source references"
-    backstory: |
-      You are a quality assurance specialist focused on entity resolution accuracy.
-      You detect missed duplicates, incorrect merges, and lost source references.
-      Your approval means the deduplicated record set faithfully represents all
-      persons found across the source documents.
-    execution: rule
-    rule_fn: src.agents.critic.validate_reconciliation_for_factory
-    input_keys: [reconciled_persons, duplicate_groups, reconciliation_retry_count]
-    output_key: last_critic_feedback
-    output_schema:
-      ref: src.models.workflow.CriticFeedback
-      is_list: false
+  # # ── critic_2 ───────────────────────────────────────────────
+  # critic_2:
+  #   role: "Reconciliation Quality Auditor"
+  #   goal: "Validate that deduplication is correct, complete, and preserves all source references"
+  #   backstory: |
+  #     You are a quality assurance specialist focused on entity resolution accuracy.
+  #     You detect missed duplicates, incorrect merges, and lost source references.
+  #     Your approval means the deduplicated record set faithfully represents all
+  #     persons found across the source documents.
+  #   execution: rule
+  #   rule_fn: src.agents.critic.validate_reconciliation_for_factory
+  #   input_keys: [reconciled_persons, duplicate_groups, reconciliation_retry_count]
+  #   output_key: last_critic_feedback
+  #   output_schema:
+  #     ref: src.models.workflow.CriticFeedback
+  #     is_list: false
 
-  # ── classifier ─────────────────────────────────────────────
-  classifier:
-    role: "KYC CSM Classification Specialist"
-    goal: "Classify each person as CSM or NON_CSM based on regulatory criteria with explicit reasoning"
-    backstory: |
-      You are a KYC compliance expert with deep knowledge of Controlling Senior Manager
-      (CSM) regulations. You apply the official CSM criteria rigorously, cite the
-      specific criterion met or not met for each person, and provide supporting evidence
-      from the source documents. You never classify without a clear, criteria-based
-      justification.
-    execution: llm
-    input_keys: [reconciled_persons, classification_feedback]
-    output_key: classified_persons
-    retry_count_key: classification_retry_count
-    output_schema:
-      ref: src.models.person.ClassifiedPerson
-      is_list: true
-    system_prompt:
-      file: ../prompts/classifier.md
+  # # ── classifier ─────────────────────────────────────────────
+  # classifier:
+  #   role: "KYC CSM Classification Specialist"
+  #   goal: "Classify each person as CSM or NON_CSM based on regulatory criteria with explicit reasoning"
+  #   backstory: |
+  #     You are a KYC compliance expert with deep knowledge of Controlling Senior Manager
+  #     (CSM) regulations. You apply the official CSM criteria rigorously, cite the
+  #     specific criterion met or not met for each person, and provide supporting evidence
+  #     from the source documents. You never classify without a clear, criteria-based
+  #     justification.
+  #   execution: llm
+  #   input_keys: [reconciled_persons, classification_feedback]
+  #   output_key: classified_persons
+  #   retry_count_key: classification_retry_count
+  #   output_schema:
+  #     ref: src.models.person.ClassifiedPerson
+  #     is_list: true
+  #   system_prompt:
+  #     file: ../prompts/classifier.md
 
-  # ── critic_3 ───────────────────────────────────────────────
-  critic_3:
-    role: "Classification Quality Auditor"
-    goal: "Validate classification reasoning quality and criteria citation for every person"
-    backstory: |
-      You are a KYC compliance auditor specialising in CSM determination reviews.
-      You verify that every classification cites specific CSM criteria, that the
-      reasoning is consistent with the stated evidence, and that no person has been
-      classified without substantive justification. Your approval certifies the
-      classification is audit-ready.
-    execution: rule
-    rule_fn: src.agents.critic.validate_classification_for_factory
-    input_keys: [classified_persons, classification_retry_count]
-    output_key: last_critic_feedback
-    output_schema:
-      ref: src.models.workflow.CriticFeedback
-      is_list: false
+  # # ── critic_3 ───────────────────────────────────────────────
+  # critic_3:
+  #   role: "Classification Quality Auditor"
+  #   goal: "Validate classification reasoning quality and criteria citation for every person"
+  #   backstory: |
+  #     You are a KYC compliance auditor specialising in CSM determination reviews.
+  #     You verify that every classification cites specific CSM criteria, that the
+  #     reasoning is consistent with the stated evidence, and that no person has been
+  #     classified without substantive justification. Your approval certifies the
+  #     classification is audit-ready.
+  #   execution: rule
+  #   rule_fn: src.agents.critic.validate_classification_for_factory
+  #   input_keys: [classified_persons, classification_retry_count]
+  #   output_key: last_critic_feedback
+  #   output_schema:
+  #     ref: src.models.workflow.CriticFeedback
+  #     is_list: false
 
   # ── formatter ──────────────────────────────────────────────
   formatter:
     role: "KYC Output Formatter"
-    goal: "Produce the final structured JSON output with document manifest and separated CSM/NON_CSM person lists"
+    goal: "Produce the final output in markdown format with pretty, clean layout to show CSM/NON_CSM person lists"
     backstory: |
-      You are a structured data specialist who assembles the final workflow output.
-      You organise classified persons into CSM and NON_CSM lists, compile the document
-      manifest, and ensure the output conforms exactly to the required JSON schema.
+      You are a report specialist with keen sense to professional looking reporting styles. One of your expertises is to turn structured data into nice markdown files. 
     execution: llm
-    input_keys: [classified_persons, documents]
-    output_key: document_manifest
-    output_schema:
-      ref: src.models.output.WorkflowOutput
-      is_list: false
+    input_keys: [extracted_persons]
+    output_key: csm_report
     system_prompt:
       file: ../prompts/formatter.md
