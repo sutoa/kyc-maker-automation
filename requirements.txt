@@ -31,9 +31,10 @@ python-dotenv>=1.0.0
 aiofiles>=24.1.0
 httpx>=0.27.0
 
-# LLM providers
-openai>=1.50.0
-google-generativeai>=0.8.0
+# LLM providers (LangChain integrations)
+langchain-openai>=0.3.0
+langchain-google-genai>=2.0.0
+langgraph-checkpoint-sqlite>=2.0.0
 
 # Retry logic
 tenacity>=9.0.0
