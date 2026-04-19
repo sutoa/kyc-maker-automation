@@ -380,15 +380,19 @@ def _build_checkpointer(runtime_cfg: dict[str, Any]) -> Any | None:
     if checkpointer_type == "sqlite" and uri:
         try:
             from langgraph.checkpoint.sqlite import SqliteSaver
-            return SqliteSaver.from_conn_string(uri)
+            # from_conn_string returns a context manager; enter it to get the saver instance.
+            cm = SqliteSaver.from_conn_string(uri)
+            return cm.__enter__()
         except ImportError:
-            logger.warning("langgraph-checkpoint-sqlite not installed, using MemorySaver")
-    elif checkpointer_type == "memory":
-        try:
-            from langgraph.checkpoint.memory import MemorySaver
-            return MemorySaver()
-        except ImportError:
-            pass
+            logger.warning("langgraph-checkpoint-sqlite not installed, falling back to MemorySaver")
+        except Exception as e:
+            logger.warning(f"Failed to create SQLite checkpointer: {e}, falling back to MemorySaver")
+
+    try:
+        from langgraph.checkpoint.memory import MemorySaver
+        return MemorySaver()
+    except ImportError:
+        pass
 
     return None
 
@@ -430,8 +434,11 @@ async def run_workflow(
             logger.warning(f"Failed to log workflow_started to audit: {e}")
 
     try:
-        # Run the workflow
-        final_state = await compiled_workflow.ainvoke(state)
+        # Run the workflow (thread_id required when checkpointer is configured)
+        final_state = await compiled_workflow.ainvoke(
+            state,
+            config={"configurable": {"thread_id": workflow_id}},
+        )
 
         status = final_state.get("status", "unknown")
         duration_seconds = (datetime.now() - start_time).total_seconds()

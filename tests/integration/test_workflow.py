@@ -5,9 +5,7 @@ These tests wire up mock agent functions that match the factory contract
 using the YAML topology from workflows.yaml.  The LLM layer is never called.
 """
 
-from datetime import datetime
 from typing import Any
-from uuid import uuid4
 
 import pytest
 
@@ -18,10 +16,9 @@ from src.core.workflow import (
     create_agent_node,
     run_workflow_sync,
 )
-from src.models.enums import CriticDecision
 from src.models.output import DocumentManifestEntry
 from src.models.person import ClassifiedPerson, ExtractedPerson, ReconciledPerson, SourceReference
-from src.models.workflow import CriticFeedback
+from src.models.workflow import ExtractorCriticFeedback, ExtractionIssueSimple
 from src.services.document import DocumentInput, PageContent
 
 
@@ -44,36 +41,20 @@ def create_test_document() -> DocumentInput:
 def create_test_extracted_persons() -> list[ExtractedPerson]:
     return [
         ExtractedPerson(
-            extraction_id="ext_1",
             first_name="Hans",
             last_name="Müller",
             job_title="Managing Director",
             job_title_original="Geschäftsführer",
-            source_references=[
-                SourceReference(
-                    document_id="test_doc_1",
-                    filename="test_document.pdf",
-                    page_number=1,
-                    extracted_text_snippet="Hans Müller, Geschäftsführer",
-                    confidence=0.95,
-                )
-            ],
+            doc_name="test_document.pdf",
+            page_number=1,
         ),
         ExtractedPerson(
-            extraction_id="ext_2",
             first_name="Anna",
             last_name="Schmidt",
             job_title="Administrative Clerk",
             job_title_original="Sachbearbeiterin",
-            source_references=[
-                SourceReference(
-                    document_id="test_doc_1",
-                    filename="test_document.pdf",
-                    page_number=1,
-                    extracted_text_snippet="Anna Schmidt, Sachbearbeiterin",
-                    confidence=0.90,
-                )
-            ],
+            doc_name="test_document.pdf",
+            page_number=1,
         ),
     ]
 
@@ -145,73 +126,90 @@ def mock_classifier(state: WorkflowState) -> WorkflowState:
 
 
 def mock_formatter(state: WorkflowState) -> WorkflowState:
-    classified = state.get("classified_persons", [])
-    csm_list = [p for p in classified if p.classification == "CSM"]
-    non_csm_list = [p for p in classified if p.classification == "NON_CSM"]
-    return WorkflowState(
-        **{
-            **state,
-            "document_manifest": [
-                DocumentManifestEntry(
-                    filename="test_document.pdf",
-                    file_type="PDF",
-                    page_count=1,
-                    processing_status="processed",
-                )
-            ],
-            "csm_list": csm_list,
-            "non_csm_list": non_csm_list,
-            "status": "completed",
-            "current_agent": "",
-        }
-    )
+    extracted = state.get("extracted_persons", [])
+    executive_terms = ["director", "managing", "ceo", "chief", "executive", "vorstand"]
+    csm_list = []
+    non_csm_list = []
+    for ep in extracted:
+        title = (ep.job_title or "").lower()
+        if any(t in title for t in executive_terms):
+            csm_list.append(ClassifiedPerson(
+                person_id=f"p_{ep.first_name}",
+                first_name=ep.first_name,
+                last_name=ep.last_name,
+                job_title=ep.job_title,
+                source_references=[],
+                classification="CSM",
+                reasoning="Executive role.",
+                criteria_met=["Criterion 1: Executive Management Role"],
+            ))
+        else:
+            non_csm_list.append(ClassifiedPerson(
+                person_id=f"p_{ep.first_name}",
+                first_name=ep.first_name,
+                last_name=ep.last_name,
+                job_title=ep.job_title,
+                source_references=[],
+                classification="NON_CSM",
+                reasoning="No executive role.",
+                criteria_not_met=["Criterion 1-5: No CSM criteria met"],
+            ))
+    return WorkflowState(**{
+        **state,
+        "document_manifest": [
+            DocumentManifestEntry(
+                filename="test_document.pdf",
+                file_type="PDF",
+                page_count=1,
+                processing_status="processed",
+            )
+        ],
+        "csm_list": csm_list,
+        "non_csm_list": non_csm_list,
+        "status": "completed",
+        "current_agent": "",
+    })
 
 
-def _pass_feedback(critic_name: str) -> CriticFeedback:
-    return CriticFeedback(
-        id=str(uuid4()),
-        agent_execution_id=str(uuid4()),
-        critic_agent_name=critic_name,
-        decision=CriticDecision.PASS,
-        suggested_corrections=None,
-        created_at=datetime.now(),
+def _pass_extractor_feedback() -> ExtractorCriticFeedback:
+    return ExtractorCriticFeedback(status="pass", issues=[], feedback="All records valid.")
+
+
+def _fail_extractor_feedback(message: str) -> ExtractorCriticFeedback:
+    return ExtractorCriticFeedback(
+        status="fail",
+        issues=[ExtractionIssueSimple(
+            first_name="?", last_name="?",
+            issue_description=message,
+            severity="error",
+        )],
+        feedback=message,
     )
 
 
 def mock_critic_1_pass(state: WorkflowState) -> WorkflowState:
-    return WorkflowState(**{**state, "last_critic_feedback": _pass_feedback("critic_1")})
+    return WorkflowState(**{**state, "extractor_critic_feedback": _pass_extractor_feedback()})
 
 
 def mock_critic_2_pass(state: WorkflowState) -> WorkflowState:
-    return WorkflowState(**{**state, "last_critic_feedback": _pass_feedback("critic_2")})
+    return WorkflowState(**{**state, "last_critic_feedback": None})
 
 
 def mock_critic_3_pass(state: WorkflowState) -> WorkflowState:
-    return WorkflowState(**{**state, "last_critic_feedback": _pass_feedback("critic_3")})
-
-
-def _fail_retry_feedback(critic_name: str, message: str) -> CriticFeedback:
-    return CriticFeedback(
-        id=str(uuid4()),
-        agent_execution_id=str(uuid4()),
-        critic_agent_name=critic_name,
-        decision=CriticDecision.FAIL_RETRY,
-        suggested_corrections=message,
-        created_at=datetime.now(),
-    )
+    return WorkflowState(**{**state, "last_critic_feedback": None})
 
 
 def make_critic_1_fail_once() -> tuple[Any, list[int]]:
-    """Return (critic_1 mock, call_counter) that FAIL_RETRYs once then PASSes."""
+    """Return (critic_1 mock, call_counter) that fails once then passes."""
     calls: list[int] = [0]
 
     def critic_fn(state: WorkflowState) -> WorkflowState:
         calls[0] += 1
         if calls[0] == 1:
-            fb = _fail_retry_feedback("critic_1", "Please retry with improvements")
+            fb = _fail_extractor_feedback("Please retry with improvements")
         else:
-            fb = _pass_feedback("critic_1")
-        return WorkflowState(**{**state, "last_critic_feedback": fb})
+            fb = _pass_extractor_feedback()
+        return WorkflowState(**{**state, "extractor_critic_feedback": fb})
 
     return critic_fn, calls
 
@@ -314,16 +312,16 @@ class TestAgentNodeWrapper:
     """Tests for agent node wrapper."""
 
     def test_agent_wrapper_updates_current_agent(self):
-        """Test that agent wrapper updates current_agent in state."""
+        """Test that agent wrapper sets current_agent to the running agent's name."""
         def simple_agent(state: WorkflowState) -> WorkflowState:
             return state
 
-        wrapped = create_agent_node("test_agent", simple_agent, "next_agent")
+        wrapped = create_agent_node("test_agent", simple_agent)
         initial_state = create_initial_state([create_test_document()])
 
         result_state = wrapped(initial_state)
 
-        assert result_state["current_agent"] == "next_agent"
+        assert result_state["current_agent"] == "test_agent"
 
     def test_agent_wrapper_handles_exception(self):
         """Test that agent wrapper handles exceptions gracefully."""

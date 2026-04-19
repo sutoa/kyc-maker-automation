@@ -15,7 +15,7 @@ from src.core.workflow import build_workflow_graph
 from src.models.enums import CriticDecision
 from src.models.output import DocumentManifestEntry
 from src.models.person import ClassifiedPerson, ExtractedPerson, ReconciledPerson, SourceReference
-from src.models.workflow import CriticFeedback
+from src.models.workflow import CriticFeedback, ExtractorCriticFeedback, ExtractionIssueSimple
 from src.services.document import DocumentInput, PageContent
 
 
@@ -39,13 +39,13 @@ def make_document(doc_id="test_doc_1", filename="test.pdf") -> DocumentInput:
     )
 
 
-def make_extracted_person(extraction_id="ext_1", first="Hans", last="Müller", title="Managing Director") -> ExtractedPerson:
+def make_extracted_person(first="Hans", last="Müller", title="Managing Director", doc_name="test.pdf", page_number=1) -> ExtractedPerson:
     return ExtractedPerson(
-        extraction_id=extraction_id,
         first_name=first,
         last_name=last,
         job_title=title,
-        source_references=[make_source_ref()],
+        doc_name=doc_name,
+        page_number=page_number,
     )
 
 
@@ -101,6 +101,22 @@ def fail_retry_feedback(critic_name: str, message: str = "Please retry") -> Crit
     )
 
 
+def pass_extractor_feedback() -> ExtractorCriticFeedback:
+    return ExtractorCriticFeedback(status="pass", issues=[], feedback="All records valid.")
+
+
+def fail_extractor_feedback(message: str = "Invalid extraction.") -> ExtractorCriticFeedback:
+    return ExtractorCriticFeedback(
+        status="fail",
+        issues=[ExtractionIssueSimple(
+            first_name="?", last_name="?",
+            issue_description=message,
+            severity="error",
+        )],
+        feedback=message,
+    )
+
+
 def fail_max_feedback(critic_name: str) -> CriticFeedback:
     return CriticFeedback(
         id=str(uuid4()),
@@ -122,7 +138,7 @@ def default_extractor(state: WorkflowState) -> WorkflowState:
 
 
 def default_critic_1_pass(state: WorkflowState) -> WorkflowState:
-    return WorkflowState(**{**state, "last_critic_feedback": pass_feedback("critic_1")})
+    return WorkflowState(**{**state, "extractor_critic_feedback": pass_extractor_feedback()})
 
 
 def default_reconciler(state: WorkflowState) -> WorkflowState:

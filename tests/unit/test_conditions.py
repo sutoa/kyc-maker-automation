@@ -67,9 +67,10 @@ class TestRouteOnExtractorCriticDecision:
         cmd = route_on_extractor_critic_decision(state)
         assert cmd.goto == END
 
-    def test_fail_at_max_retries_no_state_update(self):
+    def test_fail_at_max_retries_sets_failed_status(self):
         state = create_initial_state([_doc()])
         state["extractor_critic_feedback"] = _fail_feedback()
         state["extraction_retry_count"] = 4
         cmd = route_on_extractor_critic_decision(state)
-        assert not cmd.update  # no increment when halting
+        assert cmd.update.get("status") == "failed"
+        assert cmd.update.get("failure_reason") is not None

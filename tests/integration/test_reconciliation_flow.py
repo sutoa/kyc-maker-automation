@@ -11,7 +11,7 @@ from src.agents.critic import validate_reconciliation_for_factory
 from src.agents.reconciler import reconciler_agent
 from src.core.state import WorkflowState, create_initial_state
 from src.core.workflow import run_workflow_sync
-from src.models.person import ExtractedPerson, ReconciledPerson, SourceReference
+from src.models.person import ExtractedPerson, ReconciledPerson
 from src.services.document import DocumentInput, PageContent
 
 from .conftest import (
@@ -42,18 +42,18 @@ def make_doc(doc_id="doc1") -> DocumentInput:
 def extracted_no_duplicates() -> list[ExtractedPerson]:
     return [
         ExtractedPerson(
-            extraction_id="ext_1",
             first_name="Hans",
             last_name="Müller",
             job_title="Managing Director",
-            source_references=[SourceReference(document_id="doc1", filename="doc1.pdf", page_number=1)],
+            doc_name="doc1.pdf",
+            page_number=1,
         ),
         ExtractedPerson(
-            extraction_id="ext_2",
             first_name="Anna",
             last_name="Schmidt",
             job_title="Secretary",
-            source_references=[SourceReference(document_id="doc1", filename="doc1.pdf", page_number=2)],
+            doc_name="doc1.pdf",
+            page_number=2,
         ),
     ]
 
@@ -61,25 +61,25 @@ def extracted_no_duplicates() -> list[ExtractedPerson]:
 def extracted_with_duplicates() -> list[ExtractedPerson]:
     return [
         ExtractedPerson(
-            extraction_id="ext_1",
             first_name="Hans",
             last_name="Müller",
             job_title="Managing Director",
-            source_references=[SourceReference(document_id="doc1", filename="doc1.pdf", page_number=1)],
+            doc_name="doc1.pdf",
+            page_number=1,
         ),
         ExtractedPerson(
-            extraction_id="ext_2",
             first_name="Hans",
             last_name="Müller",
             job_title="Managing Director",
-            source_references=[SourceReference(document_id="doc1", filename="doc1.pdf", page_number=3)],
+            doc_name="doc1.pdf",
+            page_number=3,
         ),
         ExtractedPerson(
-            extraction_id="ext_3",
             first_name="Anna",
             last_name="Schmidt",
             job_title="Secretary",
-            source_references=[SourceReference(document_id="doc1", filename="doc1.pdf", page_number=2)],
+            doc_name="doc1.pdf",
+            page_number=2,
         ),
     ]
 
@@ -87,18 +87,18 @@ def extracted_with_duplicates() -> list[ExtractedPerson]:
 def extracted_german_variants() -> list[ExtractedPerson]:
     return [
         ExtractedPerson(
-            extraction_id="ext_1",
             first_name="Hans",
             last_name="Müller",
             job_title="Director",
-            source_references=[SourceReference(document_id="doc1", filename="doc1.pdf", page_number=1)],
+            doc_name="doc1.pdf",
+            page_number=1,
         ),
         ExtractedPerson(
-            extraction_id="ext_2",
             first_name="Hans",
             last_name="Mueller",
             job_title="Director",
-            source_references=[SourceReference(document_id="doc2", filename="doc2.pdf", page_number=1)],
+            doc_name="doc2.pdf",
+            page_number=1,
         ),
     ]
 

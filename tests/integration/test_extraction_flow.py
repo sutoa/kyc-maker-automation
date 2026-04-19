@@ -6,16 +6,11 @@ functions that follow the factory contract: (state: WorkflowState) -> WorkflowSt
 critic_1 is mocked as a rule-based validator so the LLM is never called.
 """
 
-from datetime import datetime
-from uuid import uuid4
-
 import pytest
 
 from src.core.state import WorkflowState, create_initial_state
 from src.core.workflow import run_workflow_sync
-from src.models.enums import CriticDecision
-from src.models.person import ExtractedPerson, SourceReference
-from src.models.workflow import CriticFeedback
+from src.models.person import ExtractedPerson
 from src.services.document import DocumentInput, PageContent
 
 from .conftest import (
@@ -25,9 +20,8 @@ from .conftest import (
     default_critic_3_pass,
     default_formatter,
     default_reconciler,
-    fail_max_feedback,
-    fail_retry_feedback,
-    pass_feedback,
+    fail_extractor_feedback,
+    pass_extractor_feedback,
 )
 
 
@@ -53,26 +47,20 @@ def create_test_document(
 def valid_extracted_persons() -> list[ExtractedPerson]:
     return [
         ExtractedPerson(
-            extraction_id="ext_1",
             first_name="Hans",
             last_name="Müller",
             job_title="Managing Director",
             job_title_original="Geschäftsführer",
-            source_references=[
-                SourceReference(document_id="doc1", filename="doc1.pdf", page_number=1,
-                                extracted_text_snippet="Hans Müller, Geschäftsführer", confidence=0.95)
-            ],
+            doc_name="doc1.pdf",
+            page_number=1,
         ),
         ExtractedPerson(
-            extraction_id="ext_2",
             first_name="Anna",
             last_name="Schmidt",
             job_title="Administrative Clerk",
             job_title_original="Sachbearbeiterin",
-            source_references=[
-                SourceReference(document_id="doc1", filename="doc1.pdf", page_number=1,
-                                extracted_text_snippet="Anna Schmidt, Sachbearbeiterin", confidence=0.90)
-            ],
+            doc_name="doc1.pdf",
+            page_number=1,
         ),
     ]
 
@@ -81,10 +69,10 @@ def invalid_extracted_persons() -> list[ExtractedPerson]:
     """Persons with whitespace-only first_name — should trigger FAIL_RETRY."""
     return [
         ExtractedPerson(
-            extraction_id="ext_1",
             first_name="   ",
             last_name="Müller",
-            source_references=[SourceReference(document_id="doc1", filename="doc1.pdf", page_number=1)],
+            doc_name="doc1.pdf",
+            page_number=1,
         ),
     ]
 
@@ -114,21 +102,17 @@ def make_extractor_fail_then_succeed(fail_count: int):
     return extractor
 
 
-def make_validating_critic_1(max_retries: int = 4):
-    """Rule-based critic_1 mock: validates extracted_persons; returns FAIL_MAX after max_retries."""
-    retry_count: list[int] = [0]
+def make_validating_critic_1():
+    """Rule-based critic_1 mock: writes ExtractorCriticFeedback pass/fail based on extracted_persons."""
 
     def critic(state: WorkflowState) -> WorkflowState:
         persons = state.get("extracted_persons", [])
-        is_valid = persons and all(p.first_name and p.first_name.strip() for p in persons)
+        is_valid = bool(persons) and all(p.first_name and p.first_name.strip() for p in persons)
         if is_valid:
-            return WorkflowState(**{**state, "last_critic_feedback": pass_feedback("critic_1")})
-        if retry_count[0] >= max_retries:
-            return WorkflowState(**{**state, "last_critic_feedback": fail_max_feedback("critic_1")})
-        retry_count[0] += 1
+            return WorkflowState(**{**state, "extractor_critic_feedback": pass_extractor_feedback()})
         return WorkflowState(**{
             **state,
-            "last_critic_feedback": fail_retry_feedback("critic_1", "Invalid extraction."),
+            "extractor_critic_feedback": fail_extractor_feedback("Invalid first name."),
         })
 
     return critic
@@ -167,7 +151,7 @@ class TestSuccessfulExtractionFlow:
         for person in final_state["extracted_persons"]:
             assert person.first_name.strip() != ""
             assert person.last_name.strip() != ""
-            assert len(person.source_references) > 0
+            assert person.doc_name != ""
 
 
 class TestExtractionRetryWithCriticFeedback:
@@ -217,10 +201,10 @@ class TestExtractionRetryWithCriticFeedback:
 class TestExtractionFailureAfterMaxRetries:
 
     def test_extraction_fails_after_max_retries(self):
-        """Workflow fails after max extraction retries (critic returns FAIL_MAX)."""
+        """Workflow fails after max extraction retries (router reaches retry_count >= 4)."""
         compiled = build_compiled_workflow(
             extractor=make_extractor_fail,
-            critic_1=make_validating_critic_1(max_retries=2),  # fail fast in tests
+            critic_1=make_validating_critic_1(),
         )
         initial_state = create_initial_state([create_test_document()])
         final_state = run_workflow_sync(compiled, initial_state)
@@ -231,7 +215,7 @@ class TestExtractionFailureAfterMaxRetries:
         """Failure reason is set when workflow fails."""
         compiled = build_compiled_workflow(
             extractor=make_extractor_fail,
-            critic_1=make_validating_critic_1(max_retries=2),
+            critic_1=make_validating_critic_1(),
         )
         initial_state = create_initial_state([create_test_document()])
         final_state = run_workflow_sync(compiled, initial_state)

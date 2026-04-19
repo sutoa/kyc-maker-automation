@@ -6,9 +6,7 @@ Tests for:
 - T313: Person without job title
 """
 
-import inspect
 import os
-from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
@@ -21,10 +19,10 @@ from src.core.state import (
 )
 from src.core.workflow import run_workflow_sync
 from src.models.output import DocumentManifestEntry
-from src.models.person import ClassifiedPerson, ExtractedPerson, ReconciledPerson, SourceReference
+from src.models.person import ClassifiedPerson, ExtractedPerson, ReconciledPerson
 from src.services.document import DocumentInput, PageContent, extract_document
 
-from .conftest import build_compiled_workflow, pass_feedback
+from .conftest import build_compiled_workflow, pass_extractor_feedback
 
 
 # ---------------------------------------------------------------------------
@@ -52,29 +50,23 @@ def create_empty_document() -> DocumentInput:
 
 def create_person_without_job_title() -> ExtractedPerson:
     return ExtractedPerson(
-        extraction_id="ext_no_title",
         first_name="Klaus",
         last_name="Weber",
         job_title=None,
         job_title_original=None,
-        source_references=[SourceReference(
-            document_id="doc1", filename="doc1.pdf", page_number=1,
-            extracted_text_snippet="Klaus Weber", confidence=0.85,
-        )],
+        doc_name="doc1.pdf",
+        page_number=1,
     )
 
 
 def create_person_with_job_title() -> ExtractedPerson:
     return ExtractedPerson(
-        extraction_id="ext_with_title",
         first_name="Maria",
         last_name="Fischer",
         job_title="Chief Executive Officer",
         job_title_original="Vorstandsvorsitzende",
-        source_references=[SourceReference(
-            document_id="doc1", filename="doc1.pdf", page_number=1,
-            extracted_text_snippet="Maria Fischer, Vorstandsvorsitzende", confidence=0.95,
-        )],
+        doc_name="doc1.pdf",
+        page_number=1,
     )
 
 
@@ -98,7 +90,7 @@ def mock_reconciler(state: WorkflowState) -> WorkflowState:
     extracted = state.get("extracted_persons", [])
     reconciled = [
         ReconciledPerson(
-            person_id=f"person_{p.extraction_id}",
+            person_id=f"person_{p.first_name}_{p.last_name}",
             first_name=p.first_name,
             last_name=p.last_name,
             first_name_normalized=p.first_name.lower().strip(),
@@ -142,8 +134,11 @@ def mock_classifier(state: WorkflowState) -> WorkflowState:
     return WorkflowState(**{**state, "classified_persons": classified})
 
 
+_EXECUTIVE_TERMS = ["ceo", "chief", "director", "executive", "officer", "vorstand"]
+
+
 def mock_formatter(state: WorkflowState) -> WorkflowState:
-    classified = state.get("classified_persons", [])
+    extracted = state.get("extracted_persons", [])
     documents = state.get("documents", [])
     manifest = [
         DocumentManifestEntry(
@@ -154,21 +149,52 @@ def mock_formatter(state: WorkflowState) -> WorkflowState:
         )
         for doc in documents
     ]
-    csm_list = [p for p in classified if p.classification == "CSM"]
-    non_csm_list = [p for p in classified if p.classification == "NON_CSM"]
-    return update_final_output(state, manifest, csm_list, non_csm_list)
+    csm_list = []
+    non_csm_list = []
+    for ep in extracted:
+        title = (ep.job_title or "").lower()
+        if any(t in title for t in _EXECUTIVE_TERMS):
+            csm_list.append(ClassifiedPerson(
+                person_id=f"person_{ep.first_name}_{ep.last_name}",
+                first_name=ep.first_name,
+                last_name=ep.last_name,
+                job_title=ep.job_title,
+                source_references=[],
+                classification="CSM",
+                reasoning=f"Criterion 1: Executive Management Role — {ep.job_title}.",
+                criteria_met=["Criterion 1: Executive Management Role"],
+            ))
+        else:
+            non_csm_list.append(ClassifiedPerson(
+                person_id=f"person_{ep.first_name}_{ep.last_name}",
+                first_name=ep.first_name,
+                last_name=ep.last_name,
+                job_title=ep.job_title,
+                source_references=[],
+                classification="NON_CSM",
+                reasoning=f"Criterion 1-5 not met — {'no job title provided' if not ep.job_title else ep.job_title}.",
+                criteria_not_met=["Criterion 1-5: No CSM criteria met"],
+            ))
+    return WorkflowState(**{
+        **state,
+        "document_manifest": manifest,
+        "csm_list": csm_list,
+        "non_csm_list": non_csm_list,
+        "status": "completed",
+        "current_agent": "",
+    })
 
 
 def mock_critic_1_pass(state: WorkflowState) -> WorkflowState:
-    return WorkflowState(**{**state, "last_critic_feedback": pass_feedback("critic_1")})
+    return WorkflowState(**{**state, "extractor_critic_feedback": pass_extractor_feedback()})
 
 
 def mock_critic_2_pass(state: WorkflowState) -> WorkflowState:
-    return WorkflowState(**{**state, "last_critic_feedback": pass_feedback("critic_2")})
+    return WorkflowState(**{**state, "last_critic_feedback": None})
 
 
 def mock_critic_3_pass(state: WorkflowState) -> WorkflowState:
-    return WorkflowState(**{**state, "last_critic_feedback": pass_feedback("critic_3")})
+    return WorkflowState(**{**state, "last_critic_feedback": None})
 
 
 def _all_pass_workflow(extractor=None, reconciler=None, classifier=None, formatter=None):
@@ -327,12 +353,12 @@ class TestPersonWithoutJobTitle:
         def extractor_all_no_titles(state: WorkflowState) -> WorkflowState:
             return WorkflowState(**{**state, "extracted_persons": [
                 ExtractedPerson(
-                    extraction_id="ext_1", first_name="Hans", last_name="Müller", job_title=None,
-                    source_references=[SourceReference(document_id="doc1", filename="doc1.pdf", page_number=1)],
+                    first_name="Hans", last_name="Müller", job_title=None,
+                    doc_name="doc1.pdf", page_number=1,
                 ),
                 ExtractedPerson(
-                    extraction_id="ext_2", first_name="Anna", last_name="Schmidt", job_title=None,
-                    source_references=[SourceReference(document_id="doc1", filename="doc1.pdf", page_number=1)],
+                    first_name="Anna", last_name="Schmidt", job_title=None,
+                    doc_name="doc1.pdf", page_number=1,
                 ),
             ]})
 

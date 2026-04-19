@@ -94,7 +94,13 @@ def route_on_extractor_critic_decision(
             f"[{state.get('workflow_id', 'unknown')}] "
             "extractor_critic_router: max retries reached → END"
         )
-        return Command(goto=END)
+        return Command(
+            goto=END,
+            update={
+                "status": "failed",
+                "failure_reason": "Extraction failed: maximum retries exceeded.",
+            },
+        )
 
     logger.info(
         f"[{state.get('workflow_id', 'unknown')}] "
