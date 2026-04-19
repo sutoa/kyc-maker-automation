@@ -1,7 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "mcp__stitch__get_screen"
+      "mcp__stitch__get_screen",
+      "WebSearch",
+      "WebFetch(domain:docs.langchain.com)",
+      "WebFetch(domain:forum.langchain.com)",
+      "Bash(*)"
+    ],
+    "deny": [
+      "Bash(rm *)",
+      "Bash(rm\t*)",
+      "Bash(*rm -rf*)",
+      "Bash(*rm -r*)"
     ],
     "additionalDirectories": [
       "/Users/tongsu/Documents/AI Ambitions/kyc-maker-automation/ai-docs/stitch-screens"
