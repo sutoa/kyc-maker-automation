@@ -1,0 +1,82 @@
+{
+  "skill_name": "project-docs",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I just finished building a task management REST API for my team. It's a FastAPI backend with JWT auth, task CRUD operations with status/priority tracking, and async email notifications via Celery. Can you generate the documentation for it? The project is at /tmp/eval-projects/task-manager-api",
+      "expected_output": "A README.md using the Full Onboarding archetype (Python service with 6 components, no external docs site). Should include: badges (CI + Python version — extracted from requirements.txt or pyproject.toml even if unpublished), features list, install command with .env setup, multiple working quick-start curl examples covering auth + task CRUD, architecture section with ASCII diagram naming the 6 components, key design decisions, configuration table, docs/ directory with architecture.md + data-flow.md + configuration.md + development.md. Every file ends with the generated-by marker. README should be 250+ lines.",
+      "files": [],
+      "expectations": [
+        "README.md is created in the outputs directory",
+        "README.md ends with the comment <!-- generated-by: project-docs-skill -->",
+        "README.md contains a section for Installation with the pip install or uvicorn command",
+        "README.md contains a Quick Start with at least 2 distinct curl examples (e.g. auth + task creation)",
+        "README.md contains an Architecture section with a component diagram",
+        "README.md contains the project name 'task-manager-api' or 'Task Manager'",
+        "README.md does not contain unfilled placeholder text like [PROJECT_NAME] or [badge]",
+        "README.md includes a Python version badge (extracted from codebase, not skipped for being unpublished)",
+        "README.md has a Configuration section or table listing environment variables",
+        "The archetype selection is stated before generation (one sentence like 'Archetype: Full Onboarding')",
+        "A docs/ directory is generated with at least architecture.md and configuration.md",
+        "README.md is at least 200 lines long"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Hey can you write docs for my Go CLI tool at /tmp/eval-projects/gitclean? It finds oversized blobs and stale branches in git repos. I want to open source it and need a proper README before I publish.",
+      "expected_output": "A README.md using Full Onboarding archetype (small Go CLI tool, no external docs site). Should include: Go-specific badges (CI + Go version from go.mod + Go Report Card), features list, go install command, a working quick-start showing 'gitclean analyze' and 'gitclean clean --dry-run', a Command Reference table or subsections for both subcommands with key flags, key design decisions. docs/ directory should be generated (gitclean has 6 source components which exceeds the 5-component threshold).",
+      "files": [],
+      "expectations": [
+        "README.md is created in the outputs directory",
+        "README.md ends with the comment <!-- generated-by: project-docs-skill -->",
+        "README.md contains an Installation section with 'go install' command",
+        "README.md contains a Quick Start section demonstrating the 'analyze' subcommand",
+        "README.md mentions both subcommands: analyze and clean",
+        "README.md contains the project name 'gitclean'",
+        "README.md does not contain unfilled placeholder text like [PROJECT_NAME] or [badge]",
+        "README.md includes a Go version badge extracted from go.mod (not skipped)",
+        "README.md includes a --dry-run flag mention since it is a destructive tool",
+        "README.md includes a Command Reference table or per-subcommand section documenting key flags",
+        "docs/ directory is generated with at least architecture.md"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "We have an open source rate limiting library for Node.js called @acme/rate-limiter that we're about to publish to npm. It supports sliding window, token bucket, and fixed window algorithms, with both in-memory and Redis storage backends. The code is at /tmp/eval-projects/rate-limiter. Can you generate professional documentation for it?",
+      "expected_output": "A README.md using Full Onboarding archetype (TypeScript library competing for npm adoption). Should include: npm/CI badges, features listing all 3 algorithms + 2 storage backends, npm install with optional Redis peer dep, a working quick-start showing SlidingWindowLimiter usage plus at least one more algorithm example, per-algorithm or per-backend usage examples in a Usage section, algorithm comparison table or descriptions, TypeScript type definitions mentioned, docs/ directory optional.",
+      "files": [],
+      "expectations": [
+        "README.md is created in the outputs directory",
+        "README.md ends with the comment <!-- generated-by: project-docs-skill -->",
+        "README.md contains an Installation section with 'npm install' command",
+        "README.md mentions the Redis peer dependency or optional Redis installation",
+        "README.md contains a Quick Start or Example section with TypeScript or JavaScript code",
+        "README.md mentions all three algorithm types: sliding window, token bucket, and fixed window",
+        "README.md mentions both storage backends: memory and Redis",
+        "README.md contains the package name '@acme/rate-limiter' or 'rate-limiter'",
+        "README.md does not contain unfilled placeholder text like [PROJECT_NAME] or [badge]",
+        "README.md includes JavaScript/TypeScript-specific content (npm badge or import syntax)",
+        "README.md includes a Usage section with per-algorithm or per-component examples"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "We built a Spring Boot REST API called employee-directory for managing company employee records. It has JWT authentication, role-based access control (HR vs ADMIN roles), full CRUD for employees, department filtering, search, and Swagger/OpenAPI docs. Please generate documentation for it. The project is at /tmp/eval-projects/java-spring-api",
+      "expected_output": "A README.md using Full Onboarding archetype (Java Spring Boot service with 7+ components). Should include: badges (CI + Java 17 version extracted from pom.xml), features list, Maven build + run command, quick start showing login + employee CRUD with curl examples, API endpoint reference table, architecture section with component diagram, key design decisions (JWT stateless auth, role-based access), configuration table for all env vars/properties. docs/ directory should be generated given the project complexity. Every file ends with the generated-by marker.",
+      "files": [],
+      "expectations": [
+        "README.md is created in the outputs directory",
+        "README.md ends with the comment <!-- generated-by: project-docs-skill -->",
+        "README.md contains a build or run command using Maven (mvn spring-boot:run or mvn package)",
+        "README.md contains a Quick Start with at least one curl example showing JWT auth flow",
+        "README.md contains an API endpoint reference (table or list of routes with methods)",
+        "README.md contains the project name 'employee-directory' or 'Employee Directory'",
+        "README.md does not contain unfilled placeholder text like [PROJECT_NAME] or [badge]",
+        "README.md includes a Java version badge (Java 17 extracted from pom.xml)",
+        "README.md mentions role-based access control (HR and ADMIN roles)",
+        "README.md has a Configuration section covering environment variables from application.properties",
+        "A docs/ directory is generated with at least architecture.md"
+      ]
+    }
+  ]
+}

@@ -5,7 +5,19 @@
       "WebSearch",
       "WebFetch(domain:docs.langchain.com)",
       "WebFetch(domain:forum.langchain.com)",
-      "Bash(*)"
+      "Bash(*)",
+      "Edit(~/.claude/skills/project-docs-workspace/**)",
+      "Bash(mkdir -p /Users/tongsu/.claude/skills/project-docs-workspace/iteration-1/go-cli-tool/with_skill/outputs/docs \\\\ *)",
+      "Bash(mkdir -p /Users/tongsu/.claude/skills/project-docs-workspace/iteration-1/python-fastapi-service/with_skill/outputs/docs)",
+      "Bash(cp /tmp/eval-projects/task-manager-api/README.md /Users/tongsu/.claude/skills/project-docs-workspace/iteration-1/python-fastapi-service/with_skill/outputs/)",
+      "Bash(cp /tmp/eval-projects/task-manager-api/docs/architecture.md /tmp/eval-projects/task-manager-api/docs/configuration.md /tmp/eval-projects/task-manager-api/docs/data-flow.md /tmp/eval-projects/task-manager-api/docs/development.md /tmp/eval-projects/task-manager-api/docs/getting-started.md /Users/tongsu/.claude/skills/project-docs-workspace/iteration-1/python-fastapi-service/with_skill/outputs/docs/)",
+      "Bash(# Check marker in eval3-with README and eval1-with docs *)",
+      "Bash(cp /tmp/project-docs-workspace/iteration-1/python-fastapi-service/without_skill/outputs/README.md /Users/tongsu/.claude/skills/project-docs-workspace/iteration-1/python-fastapi-service/without_skill/outputs/)",
+      "Bash(cp /tmp/project-docs-workspace/iteration-1/python-fastapi-service/without_skill/timing.json /Users/tongsu/.claude/skills/project-docs-workspace/iteration-1/python-fastapi-service/without_skill/)",
+      "Bash(cp /tmp/project-docs-workspace/iteration-1/nodejs-rate-limiter/without_skill/outputs/README.md /Users/tongsu/.claude/skills/project-docs-workspace/iteration-1/nodejs-rate-limiter/without_skill/outputs/)",
+      "Bash(cp /tmp/project-docs-workspace/iteration-1/nodejs-rate-limiter/without_skill/timing.json /Users/tongsu/.claude/skills/project-docs-workspace/iteration-1/nodejs-rate-limiter/without_skill/)",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)"
     ],
     "deny": [
       "Bash(rm *)",
@@ -14,7 +26,15 @@
       "Bash(*rm -r*)"
     ],
     "additionalDirectories": [
-      "/Users/tongsu/Documents/AI Ambitions/kyc-maker-automation/ai-docs/stitch-screens"
+      "/Users/tongsu/Documents/AI Ambitions/kyc-maker-automation/ai-docs/stitch-screens",
+      "/Users/tongsu/.claude/skills/project-docs-workspace/iteration-1/go-cli-tool/with_skill/outputs",
+      "/Users/tongsu/.claude/skills/project-docs-workspace/iteration-1/python-fastapi-service/with_skill/outputs",
+      "/tmp/project-docs-workspace/iteration-1/nodejs-rate-limiter/without_skill",
+      "/private/tmp/project-docs-workspace/iteration-1/nodejs-rate-limiter/without_skill",
+      "/tmp/project-docs-workspace/iteration-1/python-fastapi-service/without_skill",
+      "/private/tmp/project-docs-workspace/iteration-1/python-fastapi-service/without_skill",
+      "/tmp/eval-projects/java-spring-api",
+      "/private/tmp/eval-projects/java-spring-api"
     ]
   }
 }
