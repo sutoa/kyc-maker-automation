@@ -2,231 +2,185 @@
 
 ## Overview
 
-kyc-maker-automation is a YAML-driven multi-agent pipeline built on LangGraph. Its core job is to take a set of corporate documents (PDFs, TXT files) and extract, validate, and classify every named person into CSM (Controlling Senior Manager) or NON_CSM categories — producing a structured JSON compliance report. The domain involves German legal documents with multilingual terminology, so extraction quality is critical; a critic-gated retry loop ensures records meet mandatory field requirements before advancing.
+The KYC Maker Automation system is a multi-agent document processing pipeline that ingests
+investor onboarding packets (PDFs and structured files), extracts and classifies every
+natural person named in those documents, and produces a structured CSM/NON-CSM report for
+compliance review. The pipeline is orchestrated by LangGraph, which treats each processing
+step — extraction, validation, reconciliation, classification — as a discrete graph node
+whose transitions are controlled by critic agents that enforce quality gates before
+advancing.
 
-The architecture separates three concerns: the HTTP surface (FastAPI, `src/api/`) accepts documents and manages workflow lifecycle; the workflow engine (`src/core/`) compiles a LangGraph `StateGraph` from YAML at startup and executes agents as graph nodes; and the services layer (`src/services/`) handles document text extraction, SQLAlchemy persistence, and an immutable audit trail. Every configurable value — model names, temperatures, prompt file paths, retry counts, state key names — lives in `src/config/agents.yaml` or `src/config/workflows.yaml`. Python source contains no hardcoded agent identifiers, model strings, or threshold values.
+The core design decision is strict separation between *configuration* and *execution*. All
+agent behaviour (model, prompts, temperature, retry limits, output schemas) lives in
+`src/config/agents.yaml`; all topology (nodes, edges, routing, checkpointer) lives in
+`src/config/workflows.yaml`. No agent name, model string, or prompt path is hardcoded in
+Python source. The factory in `src/core/agent_factory.py` reads these files at runtime and
+constructs LangGraph-compatible callables dynamically. This makes the entire pipeline
+reconfigurable without code changes.
 
-The system is designed for a single-tenant compliance workflow: one SQLite database, one FastAPI process, no external message queues. LangGraph checkpoints state to SQLite after every node, enabling resume after process restart. Real-time progress is delivered via a WebSocket that the agent node wrapper emits events to after each step.
+State is immutable by convention: every agent receives a `WorkflowState` TypedDict and
+returns a *new* TypedDict with updated fields — no mutation in place. Critics write a
+`CriticFeedback` object to `last_critic_feedback`; a single generic router
+(`route_on_critic_decision`) reads it and emits `"pass"`, `"fail_retry"`, or `"fail_max"`.
+This means adding a new critic requires only a YAML entry — no new Python routing function.
 
 ## System diagram
 
 ```
-                         ┌────────────────────────────────────────────┐
-                         │              FastAPI Process                │
-                         │                                             │
-  HTTP Client ──POST──►  │  /api/v1/workflows          ┌──────────┐   │
-                         │  /api/v1/workflows/{id}/start│  Config  │   │
-  HTTP Client ──GET───►  │  /api/v1/workflows/{id}     │  Loader  │   │
-                         │  /api/v1/documents/upload   └────┬─────┘   │
-  WS Client ─────WS───►  │  /ws/workflows/{id}              │         │
-                         │          │                        │ YAML    │
-                         │    ┌─────┴──────┐         agents.yaml      │
-                         │    │  Workflow   │◄────── workflows.yaml   │
-                         │    │  Engine    │                          │
-                         │    │ (LangGraph) │                          │
-                         │    └─────┬──────┘                          │
-                         │          │ nodes                            │
-                         │    ┌─────▼──────────────────────┐          │
-                         │    │  Agent Node Wrapper         │──events─►WS
-                         │    │  ┌──────────────────────┐  │          │
-                         │    │  │  Extractor (LLM)     │  │          │
-                         │    │  │  ExtractorCritic(LLM)│  │          │
-                         │    │  │  CriticRouter (rule)  │  │          │
-                         │    │  │  Formatter (LLM)     │  │          │
-                         │    │  └──────────────────────┘  │          │
-                         │    └─────┬──────────────────────┘          │
-                         │          │                                  │
-                         │    ┌─────▼──────────────────────────────┐  │
-                         │    │  Services Layer                     │  │
-                         │    │  DocumentService  (pdfplumber)      │  │
-                         │    │  AuditService     (SHA-256 log)     │  │
-                         │    │  StorageService   (SQLAlchemy)      │  │
-                         │    └─────┬──────────────────────────────┘  │
-                         │          │                                  │
-                         └──────────┼──────────────────────────────────┘
-                                    │
-                         ┌──────────▼──────────────────┐
-                         │  SQLite Database             │
-                         │  workflow_runs               │
-                         │  uploaded_documents          │
-                         │  audit_logs (immutable)      │
-                         │  LangGraph checkpoints       │
-                         └─────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                         FastAPI / WebSocket                          │
+│  POST /workflows/start   GET /workflows/{id}   WS /workflows/{id}    │
+└───────────────────────────────┬──────────────────────────────────────┘
+                                │ DocumentInput[]
+                                ▼
+                     ┌──────────────────┐
+                     │  WorkflowService │  creates WorkflowState, runs graph
+                     └────────┬─────────┘
+                              │ LangGraph .invoke()
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        LangGraph Workflow                           │
+│                                                                     │
+│  START ──► extractor ──► extractor_critic_router ──► critic_1      │
+│                                        │                │           │
+│                               pass ◄──┘    fail_retry──┘           │
+│                                │           fail_max ──► END(fail)  │
+│                                ▼                                    │
+│                          reconciler ──► critic_2 (rule)            │
+│                                │                                    │
+│                          classifier ──► critic_3 (rule)            │
+│                                │                                    │
+│                           formatter ──► END(success)               │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                    WorkflowState (final)
+                              │
+                    ┌─────────▼──────────┐
+                    │  AuditService      │  SHA-256 checksums, SQLite
+                    │  StorageService    │  file persistence
+                    └────────────────────┘
 ```
 
 ## Components
 
-### Workflow Engine
-
-- **Location**: `src/core/workflow.py`
-- **Purpose**: Compiles a `StateGraph` from `workflows.yaml` at application startup; wraps every agent node with logging, WebSocket event emission, and audit trail writes; provides `run_workflow_sync()` for blocking execution
-- **Inputs**: `WorkflowState` (initial state with documents and workflow_id)
-- **Outputs**: Final `WorkflowState` containing `csm_report`, updated status, and all intermediate person records
-- **Key types/interfaces**: `WorkflowState` TypedDict, `AgentFunction = Callable[[WorkflowState], WorkflowState]`
-- **Design notes**: Router nodes return `Command` objects instead of plain strings to atomically combine state updates with routing decisions. See `compile_workflow` deep-dive in [docs/deep-dive.md](deep-dive.md) for full internals.
-
-### Agent Factory
+### agent_factory
 
 - **Location**: `src/core/agent_factory.py`
-- **Purpose**: Builds agent callables from YAML config. `execution: llm` agents get a prompt-rendering closure that calls a LangChain ChatModel with structured output; `execution: rule` agents get a thin wrapper around a Python callable resolved by dotted path
-- **Inputs**: `agent_name`, `agent_cfg` (merged YAML dict with defaults applied), `agents_dir` (path for resolving relative prompt file paths)
-- **Outputs**: `(state: WorkflowState) -> WorkflowState` callable, ready to be registered as a LangGraph node
-- **Key types/interfaces**: `build_agent_fn()` public API; `_build_llm_agent_fn()`, `_build_rule_agent_fn()` internal builders
-- **Design notes**: LLM model is instantiated fresh per-invocation rather than at build time, which avoids holding open connections and simplifies testing. Schema resolution (`_resolve_schema`) happens at factory build time so misconfigured refs fail fast on startup.
+- **Purpose**: Builds LangGraph-compatible agent callables from `agents.yaml` config at runtime — the single place where LLM providers are instantiated and prompt templates are loaded.
+- **Inputs**: Agent name, merged agent config dict, path to agents directory
+- **Outputs**: `(state: WorkflowState) -> WorkflowState` callable
+- **Key types/interfaces**: `build_agent_fn(agent_name, agent_cfg, agents_dir) -> Callable`
+- **Design notes**: Two execution paths — `execution: llm` builds a structured-output LangChain chain; `execution: rule` resolves a dotted-path callable and wraps it. Schema classes are resolved once at build time (fail-fast), not per invocation.
 
-### Config Loader
+### workflow compiler
 
-- **Location**: `src/config/loader.py`
-- **Purpose**: Loads `agents.yaml` and `workflows.yaml`, applies per-agent defaults from `defaults:`, resolves `agents_ref` cross-references, and validates both files against JSON schemas
-- **Inputs**: File paths to YAML config files
-- **Outputs**: Typed config dicts; `dict[str, AgentFunction]` for all active agents
-- **Key types/interfaces**: `load_agents_config()`, `load_workflows_config()`, `build_agent_functions()`
+- **Location**: `src/core/workflow.py`
+- **Purpose**: Reads `workflows.yaml` and assembles a compiled LangGraph `StateGraph` — translates declarative YAML topology into `add_node` / `add_edge` / `add_conditional_edges` calls.
+- **Inputs**: Paths to `agents.yaml` and `workflows.yaml`; optional checkpointer URI
+- **Outputs**: Compiled `CompiledStateGraph` ready for `.invoke()` / `.stream()`
+- **Key types/interfaces**: `compile_workflow() -> CompiledStateGraph`
+- **Design notes**: Router nodes (type: `router`) are wired with `add_conditional_edges`; the routing function is resolved from `conditions.route_on_critic_decision` via dotted path. Regular nodes are wrapped in a thin lambda that increments the `on_traverse.increment_key` counter before delegating to the agent function.
 
-### Conditions / Router
-
-- **Location**: `src/core/conditions.py`
-- **Purpose**: Routing functions referenced by name in `workflows.yaml`. `route_on_critic_decision` is the generic router for rule-based critics; `route_on_extractor_critic_decision` is the router for the LLM extraction critic loop
-- **Inputs**: `WorkflowState`
-- **Outputs**: `str` route key (generic router) or `Command[Literal[...]]` (extractor router)
-- **Design notes**: The extractor router returns `Command(goto=..., update={"extraction_retry_count": n+1})` to atomically increment the retry counter and select the next node. Doing this in a conditional edge function would apply state updates outside the node wrapper's write window.
-
-### State
+### WorkflowState
 
 - **Location**: `src/core/state.py`
-- **Purpose**: Defines `WorkflowState` as a `TypedDict` — the single shared dict flowing through all agents and the node wrapper. Provides immutable update helpers
-- **Key types/interfaces**: `WorkflowState`, `create_initial_state(documents, workflow_id)`
+- **Purpose**: Single shared state object that flows through every graph node — carries inputs, intermediate results, retry counters, critic feedback, and final outputs.
+- **Inputs**: `DocumentInput[]` at workflow start
+- **Outputs**: `csm_list`, `non_csm_list`, `csm_report` at graph end
+- **Key types/interfaces**: `WorkflowState` (TypedDict); `create_initial_state()`, `update_workflow_failed()`
+- **Design notes**: `total=False` so every field is optional — agents only assert the fields they read. Immutable update pattern: all helpers return `WorkflowState(**{**state, key: value})`.
 
-### FastAPI Application
+### config loader
 
-- **Location**: `src/api/main.py`
-- **Purpose**: Application factory with lifespan handler that initialises the database and compiles the LangGraph workflow on startup. Configures CORS and registers error handlers
-- **Design notes**: Workflow compilation is done once at startup (`app.state.compiled_workflow`) and shared across all requests, avoiding per-request YAML parsing.
+- **Location**: `src/config/loader.py`
+- **Purpose**: Loads and validates `agents.yaml` and `workflows.yaml` against JSON Schema, performs semantic cross-validation (e.g. every `agents_ref` node references a known agent key), and merges per-agent config with `defaults`.
+- **Inputs**: YAML file paths
+- **Outputs**: Validated dicts consumed by `agent_factory` and `workflow compiler`
+- **Key types/interfaces**: `ConfigError`, `ConfigValidationError`
 
-### Document Routes
+### FastAPI app
 
-- **Location**: `src/api/routes/documents.py`
-- **Purpose**: Upload individual documents to an existing workflow; query document metadata and processing status
-- **Key types**: `DocumentUploadResponse`, `DocumentMetadataResponse`
+- **Location**: `src/api/main.py`, `src/api/routes/`
+- **Purpose**: HTTP and WebSocket interface — accepts document uploads, starts workflows, streams events to clients, exposes workflow status and audit log endpoints.
+- **Inputs**: Multipart file uploads, workflow IDs
+- **Outputs**: JSON responses; WebSocket event stream (start, agent_complete, completed, failed)
+- **Key types/interfaces**: FastAPI `APIRouter` per route group
 
-### Workflow Routes
-
-- **Location**: `src/api/routes/workflows.py`
-- **Purpose**: Create workflow with documents (multipart upload); start pipeline execution; retrieve status, output, execution trace, and paginated workflow history
-- **Key types**: `WorkflowCreateResponse`, `WorkflowStartResponse`, `WorkflowStatusResponse`, `WorkflowTraceResponse`
-
-### WebSocket Handler
-
-- **Location**: `src/api/websocket.py`
-- **Purpose**: Manages WebSocket connections keyed by `workflow_id`; broadcasts structured JSON events from the agent node wrapper to subscribed clients in real time
-- **Endpoint**: `ws://<host>/ws/workflows/{workflow_id}`
-
-### Document Service
-
-- **Location**: `src/services/document.py`
-- **Purpose**: Extracts text from PDF files with page boundary tracking. pdfplumber is the primary extractor (preserves layout and page numbers); PyMuPDF is the fallback for malformed PDFs and is OCR-capable for scanned documents
-- **Inputs**: File path (PDF or TXT)
-- **Outputs**: `DocumentInput` — full text, `list[PageContent]` (per-page text), and page count
-- **Key types/interfaces**: `DocumentInput`, `PageContent`, `DocumentExtractionError`
-- **Design notes**: Page provenance is mandatory — every `ExtractedPerson` record carries the page numbers it was found on, enabling auditors to verify extractions against source documents.
-
-### Audit Service
+### AuditService
 
 - **Location**: `src/services/audit.py`
-- **Purpose**: Creates immutable audit log entries for every workflow event. Each entry includes a SHA-256 checksum of the event data. No UPDATE or DELETE operations are permitted at the service or database level
-- **Inputs**: Event type, workflow_id, agent_name, payload dict
-- **Outputs**: `AuditLogDB` record persisted to SQLite
-- **Key types/interfaces**: `AuditEventType` enum, `create_audit_service()`, `AuditService.log_event()`
+- **Purpose**: Writes immutable audit log entries for every workflow action with SHA-256 checksums; enforces 7-year retention.
+- **Inputs**: Workflow ID, action name, payload
+- **Outputs**: `audit_logs` table rows (SQLite via SQLAlchemy)
+- **Design notes**: UPDATE and DELETE are prevented at the database trigger level — audit entries are append-only by design (FR-029).
 
-### Storage Service
+### DocumentService
 
-- **Location**: `src/services/storage.py`
-- **Purpose**: SQLAlchemy session management and CRUD operations for `WorkflowRunDB`, `UploadedDocumentDB`, and `AuditLogDB` tables
-- **Key types/interfaces**: `WorkflowRunDB`, `UploadedDocumentDB`, `AuditLogDB`, `get_db()` session factory
-
-### Pydantic Models
-
-- **Location**: `src/models/`
-- **Purpose**: Type-safe data contracts for every domain object: `ExtractedPerson` (name, titles, source pages), `ReconciledPerson`, `ClassifiedPerson`, `CriticFeedback`, `ExtractorCriticFeedback`, workflow enums
-- **Key types**: `src/models/person.py`, `src/models/workflow.py`, `src/models/enums.py`
+- **Location**: `src/services/document.py`
+- **Purpose**: Extracts raw text from PDFs and structured files; normalises encoding and produces `DocumentInput` objects consumed by the extractor agent.
+- **Inputs**: Uploaded file bytes (PDF, DOCX, structured)
+- **Outputs**: `DocumentInput` (filename, content, mime_type)
 
 ## Data model
 
 ```
-WorkflowRunDB
-  id (workflow_id)  PK (UUID string)
-  status            ENUM (pending|in_progress|completed|failed)
-  created_at        TIMESTAMP
-  started_at        TIMESTAMP nullable
-  completed_at      TIMESTAMP nullable
-  output_json_path  VARCHAR nullable    ← path to downloaded report file
+audit_logs
+  id            INTEGER PK
+  workflow_id   TEXT
+  action        TEXT
+  payload       TEXT (JSON)
+  checksum      TEXT (SHA-256)
+  created_at    TIMESTAMP
 
-UploadedDocumentDB
-  id (document_id)  PK (UUID string)
-  workflow_run_id   FK → WorkflowRunDB.id
-  filename          VARCHAR
-  file_type         ENUM (PDF|TXT)
-  file_size_bytes   INTEGER
-  page_count        INTEGER nullable
-  storage_path      VARCHAR
-  processing_status VARCHAR
-  error_message     TEXT nullable
-
-AuditLogDB
-  id                PK (auto-increment)
-  workflow_id       VARCHAR (indexed)
-  event_type        VARCHAR
-  agent_name        VARCHAR nullable
-  payload           TEXT (JSON)
-  checksum          VARCHAR (SHA-256 of payload)
-  created_at        TIMESTAMP
-  ─── NO UPDATE or DELETE operations permitted ───
+workflows
+  id            TEXT PK (UUID)
+  status        TEXT  (pending | in_progress | completed | failed)
+  created_at    TIMESTAMP
+  completed_at  TIMESTAMP NULL
+  failure_reason TEXT NULL
 ```
 
 ## Design decisions
 
-1. **YAML as single source of truth for all agent configuration**
+1. **Configuration-driven agent factory over individual agent files**
 
-   *Choice*: All agent names, model strings, temperatures, prompt file paths, retry limits, and state key names declared in `agents.yaml` and `workflows.yaml`. Python source contains no hardcoded values.
-   *Alternatives considered*: Per-agent Python modules with hardcoded config; environment variables per agent.
-   *Rationale*: Configuration drift between agents and between environments was the primary concern. YAML makes every configurable value visible in one place, enabling non-engineers to adjust model selection or retry policy without touching Python. Adding a new agent (e.g. re-enabling the reconciler) is a YAML edit rather than a code change.
+   *Choice*: All agents are built by one factory reading `agents.yaml`; no per-agent Python files.
+   *Alternatives considered*: Individual `extractor.py`, `critic.py` files with hardcoded config.
+   *Rationale*: Eliminates duplication; allows prompt/model changes without touching Python; makes adding a new agent a YAML-only operation.
 
-2. **One generic agent factory instead of per-agent classes**
+2. **Single generic critic router (`route_on_critic_decision`)**
 
-   *Choice*: `build_agent_fn()` constructs any agent type (`llm` or `rule`) from config. No `ExtractorAgent` class, no `CriticAgent` class.
-   *Alternatives considered*: Subclass hierarchy per agent; one Python file per agent with hardcoded logic.
-   *Rationale*: Per-agent classes duplicate cross-cutting concerns (logging, retry increment, state update pattern). A factory ensures every agent behaves identically at the node wrapper level. Adding a new LLM agent requires only a YAML entry and a prompt file.
+   *Choice*: One routing function reads `last_critic_feedback.decision` and returns `"pass"` / `"fail_retry"` / `"fail_max"` for all critics.
+   *Alternatives considered*: Per-critic routing functions (`route_on_critic_1`, `route_on_critic_2`).
+   *Rationale*: The routing logic is identical for every critic — only the feedback writer differs. One function means one place to change retry semantics across the whole pipeline.
 
-3. **`Command` return in critic router instead of conditional edge function**
+3. **Immutable state updates**
 
-   *Choice*: `route_on_extractor_critic_decision` is a router node that returns `Command(goto=..., update={...})`. The retry counter increment happens inside the Command, not in a separate node.
-   *Alternatives considered*: A conditional edge function returning a route string; a separate `increment_retry_count` node before routing.
-   *Rationale*: LangGraph conditional edge functions are pure routing functions — state mutations inside them are applied outside the node wrapper and outside the checkpointer's write window, creating subtle bugs. `Command` makes the state update and the routing decision atomic and visible to the checkpointer.
+   *Choice*: Every node returns a new `WorkflowState(**{**state, key: value})` — no in-place mutation.
+   *Alternatives considered*: Mutable dict; dataclass with `__setattr__`.
+   *Rationale*: LangGraph checkpointing and replay require stable snapshots. Immutable updates make it trivial to reproduce any intermediate state from the checkpoint store.
 
-4. **Immutable audit log with SHA-256 checksums**
+4. **Rule-based critics declared in YAML with `execution: rule`**
 
-   *Choice*: `AuditLogDB` rows are write-only. The service layer has no `update` or `delete` methods. Each row includes a SHA-256 of its payload.
-   *Alternatives considered*: Standard mutable log table; structured file-based logging only.
-   *Rationale*: KYC compliance (FR-029) requires a tamper-evident audit trail with 7-year retention. SHA-256 checksums allow external auditors to verify that log entries have not been modified. The database-level immutability constraint enforces this even if application code is modified.
+   *Choice*: Critics that apply deterministic rules are Python functions resolved at runtime via dotted path in `rule_fn`.
+   *Alternatives considered*: Separate node type; hardcoded `if` branches in workflow compiler.
+   *Rationale*: Keeps the factory pattern universal — both LLM and rule agents are configured identically in YAML and built by the same public API.
 
-5. **pdfplumber primary, PyMuPDF fallback for PDF extraction**
+5. **Router nodes (type: router) as explicit graph nodes**
 
-   *Choice*: Try pdfplumber first; catch `pdfplumber.exceptions` and retry with PyMuPDF.
-   *Alternatives considered*: PyMuPDF only; Tesseract OCR for all PDFs; AWS Textract.
-   *Rationale*: pdfplumber preserves layout and page boundaries with high fidelity for structured PDFs, which is essential for accurate source provenance. PyMuPDF handles malformed PDFs and scanned documents that pdfplumber cannot parse. This two-library approach maximises coverage without requiring external services.
+   *Choice*: Critic routing is a dedicated node in the graph, not a `conditional_edge` function that mutates state.
+   *Alternatives considered*: Inline `conditional_edge` functions that wrote to state before returning a route string.
+   *Rationale*: LangGraph docs warn against state mutation inside conditional edge functions. A router node is a proper node that can safely write state and then route.
 
 ## External dependencies
 
 | Dependency | Version | Purpose | Alternatives considered |
 |---|---|---|---|
-| `langgraph` | ≥0.2.0 | StateGraph orchestration; checkpointing; `Command` routing | LangChain LCEL chains (no graph topology, no state persistence) |
-| `langchain-core` | ≥0.3.0 | `ChatModel` interface; `SystemMessage`; structured output | Direct OpenAI SDK (would lose provider abstraction) |
-| `langchain-openai` | ≥0.3.0 | OpenAI provider for LangChain | Direct `openai` SDK |
-| `langchain-google-genai` | ≥2.0.0 | Gemini provider for LangChain | `google-generativeai` SDK directly |
-| `fastapi` | ≥0.115.0 | HTTP API and WebSocket | Flask (no async native), Django REST (heavier) |
-| `pdfplumber` | ≥0.11.0 | PDF text extraction with layout awareness | PyMuPDF only (weaker layout preservation) |
-| `pymupdf` | ≥1.24.0 | PDF fallback extractor; OCR-capable | pdfplumber only (fails on some PDFs) |
-| `rapidfuzz` | ≥3.10.0 | Fuzzy name matching for reconciler | `fuzzywuzzy` (slower, less maintained) |
-| `sqlalchemy` | ≥2.0.0 | ORM for workflow and audit persistence | Raw SQLite; Tortoise ORM (async-only) |
-| `langgraph-checkpoint-sqlite` | ≥2.0.0 | LangGraph state persistence to SQLite | In-memory checkpointer (no resume on restart) |
+| `langgraph` | ≥0.2.0 | Multi-agent workflow orchestration with checkpointing | LangChain LCEL chains (no persistent graph state), Prefect (heavyweight) |
+| `langchain-openai` / `langchain-google-genai` | latest | Chat model wrappers for OpenAI and Gemini | Direct SDK calls (loses `with_structured_output` and provider abstraction) |
+| `fastapi` | ≥0.115.0 | HTTP API and WebSocket server | Flask (no async-native WebSocket), Django (too heavy) |
+| `pdfplumber` | ≥0.11.0 | PDF text extraction with layout awareness | PyPDF2 (less accurate on complex layouts), pdfminer (lower-level API) |
+| `rapidfuzz` | ≥3.10.0 | Fuzzy string matching for person deduplication | fuzzywuzzy (deprecated, slower), difflib (no token-set ratio) |
+| `sqlalchemy` | latest | ORM for audit log and workflow persistence | Raw sqlite3 (no migration support), Tortoise ORM (async-only, less mature) |
 
 <!-- generated-by: project-docs-skill -->

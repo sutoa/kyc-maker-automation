@@ -42,6 +42,42 @@ This comment is invisible when rendered and acts as a fingerprint.
 
 ---
 
+## Phase 0: Detect User Intent
+
+Before doing anything else, determine what the user wants to produce.
+
+**Targeted signals** — the user names a specific output:
+- A specific doc (`"update architecture doc"`, `"regenerate configuration"`, `"refresh getting-started"`)
+- A deep-dive with a named subject (`"deep dive on agent_factory"`, `"explain how compile_workflow works"`)
+- A deep-dive without a subject (`"add a deep dive"`, `"do a deep dive"`)
+
+**Full-generation signals** — `"document this project"`, `"generate docs"`, `"write a README"`, or no specific target.
+
+Assign a mode based on this:
+
+| Signal | Mode |
+|---|---|
+| Named specific doc(s) | `targeted` |
+| Deep-dive with subject | `deep-dive` |
+| Deep-dive without subject | `deep-dive-discover` |
+| Full-generation or unclear | `full` |
+
+Announce before proceeding, e.g.:
+> *"Mode: targeted — will update `docs/architecture.md` only. Running Phase 1 first to understand the codebase."*
+
+**Phase 1 is never skipped**, regardless of mode. Selective updates still require full codebase understanding.
+
+**Phase routing by mode:**
+
+| Mode | Run phases |
+|---|---|
+| `full` | 1 → 2 → 3 → 4 → 5 |
+| `targeted` | 1 → only the phase(s) that produce the requested file(s) |
+| `deep-dive` | 1 → 5 (with the named subject) |
+| `deep-dive-discover` | 1 → 5a (discover candidates first, then 5) |
+
+---
+
 ## Phase 1: Detect
 
 Read these files in parallel (skip any that don't exist):
@@ -135,34 +171,58 @@ A thin README signals an incomplete onboarding experience.
 
 ## Phase 4: Generate docs/ Directory
 
-Generate a `docs/` directory when the project has **5 or more major components** OR **2 or
-more distinct user-facing workflows**. Check for these using what you found in Phase 1.
+> **Targeted mode:** if the current mode is `targeted`, generate **only the single file the user named** from the table below. Do not create, overwrite, or touch any other file in `docs/` — not even files that would normally always be created. Skip straight to the row matching the requested file.
+
+In `full` mode: generate a `docs/` directory when the project has **5 or more major components** OR **2 or more distinct user-facing workflows**. Check for these using what you found in Phase 1.
 
 Apply the overwrite policy to each file individually.
 
 For each docs/ file, read the corresponding template from `assets/templates/` before writing:
 
-| File to create | Template to read | Create when |
+| File | Template | Create when |
 |---|---|---|
-| `docs/getting-started.md` | (no template — derive from README Quick Start, expand) | Always |
-| `docs/architecture.md` | `docs-architecture.md` | Always |
-| `docs/data-flow.md` | `docs-data-flow.md` | Project has pipelines, queues, or multi-step request flows |
-| `docs/configuration.md` | `docs-configuration.md` | Non-trivial config surface (>5 env vars or config file) |
-| `docs/reference/[component].md` | (no template — adapt from readme-full-onboarding API Reference) | REST API or CLI with multiple commands |
-| `docs/development.md` | `docs-development.md` | Always |
+| `docs/getting-started.md` | (no template — derive from README Quick Start, expand) | `full` mode always; `targeted` if named |
+| `docs/architecture.md` | `docs-architecture.md` | `full` mode always; `targeted` if named |
+| `docs/data-flow.md` | `docs-data-flow.md` | `full` mode: project has pipelines, queues, or multi-step flows; `targeted` if named |
+| `docs/configuration.md` | `docs-configuration.md` | `full` mode: non-trivial config surface (>5 env vars or config file); `targeted` if named |
+| `docs/reference/[component].md` | (no template — adapt from readme-full-onboarding API Reference) | `full` mode: REST API or CLI with multiple commands; `targeted` if named |
+| `docs/development.md` | `docs-development.md` | `full` mode always; `targeted` if named |
 
 ---
 
 ## Phase 5: Function Implementation Deep-Dives (optional)
 
-After completing Phases 3–4, ask the user:
+### Phase 5a: Discover candidates (mode: deep-dive-discover only)
+
+When the user asked for a deep-dive but named no subject, identify worthwhile candidates before writing anything:
+
+1. Scan `src/` for:
+   - Files > 150 lines with complex logic (multiple branches, external calls, orchestration)
+   - Functions that appear most frequently when grepped across the codebase
+   - Components implementing non-obvious patterns (factories, critic loops, state machines, routing)
+   - Modules that are central to the system but whose internals are not obvious from the name alone
+
+2. Select the top 3 candidates (no more — `AskUserQuestion` caps at 4 options and one slot is reserved for free-text). For each, write a one-sentence "why this is interesting" note (the design decision, the non-obvious behaviour, or the hidden complexity).
+
+3. Use `AskUserQuestion` to present them. Structure the call like this:
+   - One question, `header: "Deep-dive topic"`, `multiSelect: false`
+   - Each of the 3 candidates as an option: `label` = component name, `description` = your one-sentence note
+   - Final (4th) option: `label: "I'll specify my own topic"`, `description: "Type your topic in the Other box"`
+
+4. Once the user selects, proceed to the main Phase 5 steps below with that subject.
+
+---
+
+### Phase 5 main: Generate deep-dive
+
+After completing Phases 3–4 in `full` mode, ask the user:
 
 > *"Documentation is complete. Would you like me to generate implementation deep-dives for
 > any specific functions or components? These cover: description, design decisions,
 > complexity and edge cases, a Mermaid sequence diagram, consumers, known issues, and
 > future enhancements. If yes, list the function or component names."*
 
-If the user provides names:
+If the user provides names (or a name was already supplied via `deep-dive` / `deep-dive-discover` mode):
 
 1. For each named function or component:
    a. Read `assets/templates/function-deep-dive.md`
@@ -189,6 +249,25 @@ well-named, say so plainly — do not invent complexity.
 
 ---
 
+## File → Phase mapping (for targeted mode)
+
+Use this table to know which phase to run for a given file:
+
+| Requested file | Phase to run |
+|---|---|
+| `README.md` | Phase 3 |
+| `docs/getting-started.md` | Phase 4 |
+| `docs/architecture.md` | Phase 4 |
+| `docs/data-flow.md` | Phase 4 |
+| `docs/configuration.md` | Phase 4 |
+| `docs/development.md` | Phase 4 |
+| `docs/reference/[component].md` | Phase 4 |
+| `docs/deep-dive.md` or a specific deep-dive section | Phase 5 |
+
+When running Phase 4 in targeted mode, generate only the single requested file — do not create or overwrite any other file in `docs/`.
+
+---
+
 ## Quality checks before finishing
 
 Before reporting the task complete:
@@ -202,3 +281,5 @@ Before reporting the task complete:
 - [ ] "Key design decisions" lists real decisions from the codebase, not generic statements
 - [ ] API Reference / Command Reference section is present for projects with multiple commands, endpoints, or selectable components
 - [ ] Phase 5 prompt was offered to the user
+- [ ] In `targeted` mode: only the requested file(s) were written — no other files touched
+- [ ] In `deep-dive-discover` mode: `AskUserQuestion` was used to present candidates before writing anything
