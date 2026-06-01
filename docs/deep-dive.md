@@ -175,6 +175,62 @@ sequenceDiagram
 
 ---
 
+## How to run
+
+`compile_workflow` itself runs at server startup — you exercise it by starting the API and submitting a real workflow run. There is no frontend; all interaction is via the REST API.
+
+**Prerequisites**:
+```bash
+# 1. Copy env file and fill in your LLM API key
+cp .env.example .env
+# Edit .env: set OPENAI_API_KEY (or GOOGLE_API_KEY + LLM_PROVIDER=gemini)
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Start the API server — compile_workflow() fires here during lifespan startup
+uvicorn src.api.main:app --reload --port 8000
+# Expected log: "Workflow compiled from YAML config."
+```
+
+**Trigger `compile_workflow` through a full workflow run**:
+```bash
+# Step 1 — Upload a PDF and create a workflow (replace path with a real PDF)
+WORKFLOW_ID=$(curl -s -X POST http://localhost:8000/api/v1/workflows \
+  -F "files=@/path/to/kyc_document.pdf" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['workflow_id'])")
+echo "Created workflow: $WORKFLOW_ID"
+
+# Step 2 — Start processing
+curl -s -X POST http://localhost:8000/api/v1/workflows/$WORKFLOW_ID/start | python3 -m json.tool
+
+# Step 3 — Poll status
+curl -s http://localhost:8000/api/v1/workflows/$WORKFLOW_ID | python3 -m json.tool
+
+# Step 4 — Retrieve output once status = "completed"
+curl -s http://localhost:8000/api/v1/workflows/$WORKFLOW_ID/output | python3 -m json.tool
+```
+
+**What to observe**:
+- On `uvicorn` start: `INFO - Workflow compiled from YAML config.` confirms `compile_workflow` ran without error
+- On `POST /start`: server log shows each agent firing in order — `Starting agent: extractor`, `Starting agent: critic_1`, …
+- On status poll: `"status": "completed"` with `csm_list` / `non_csm_list` populated
+- Swagger UI available at `http://localhost:8000/api/v1/docs` for manual exploration
+
+**Run the integration tests directly** (no live LLM — uses mocked responses):
+```bash
+# All integration tests (covers compile_workflow + full graph execution)
+pytest tests/integration/ -v
+
+# Single test that exercises the happy path through compile_workflow
+pytest tests/integration/test_extraction_end_to_end.py::test_extraction_pass -v
+
+# With stdout to see agent log lines
+pytest tests/integration/ -v -s
+```
+
+---
+
 ## Known issues and potential issues
 
 **Known bugs / limitations**:

@@ -120,6 +120,48 @@ sequenceDiagram
 
 ---
 
+## How to run
+
+[Practical steps to exercise this function or feature locally. Tailor to what the subject
+ actually needs — omit steps that don't apply. Be specific: exact commands, ports, env vars.]
+
+**Prerequisites** (services that must be running):
+```bash
+# [Start backend / API server — include port and any required env vars]
+# e.g. uvicorn src.api.main:app --reload --port 8000
+
+# [Start frontend dev server — only if this is a UI feature]
+# e.g. npm run dev   # → http://localhost:3000
+
+# [Start any other dependency — database, queue, mock server, etc.]
+```
+
+**Trigger the function**:
+```bash
+# [Minimal command or request to invoke this code path]
+# e.g. curl -X POST http://localhost:8000/api/endpoint \
+#   -H "Content-Type: application/json" \
+#   -d '{"key": "value"}'
+
+# [Or: describe the UI interaction — which page, which button, what input]
+# e.g. Open http://localhost:3000/dashboard → click "Upload Document" → select a PDF
+```
+
+**What to observe**:
+- [What a successful run looks like — response body, UI change, log line, etc.]
+- [Where to look if something goes wrong — log file, browser console, terminal output]
+
+**Run the tests directly**:
+```bash
+# [pytest / jest / go test command scoped to this function's test file]
+# e.g. pytest tests/unit/test_extractor.py -v
+```
+
+[If the function is purely internal with no direct invocation path, describe how to reach
+ it through the nearest entry point and what state to set up first.]
+
+---
+
 ## Known issues and potential issues
 
 [Be honest about limitations. This section is for future maintainers, not for marketing.]
